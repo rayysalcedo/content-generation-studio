@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CC360 Course Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --border: #e5e5e0;
+    --border-strong: #d4d4d0;
+    --text: #1a1a1a;
+    --text-dim: #525252;
+    --text-faint: #8a8a85;
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --accent-soft: #eef2ff;
+    --danger: #dc2626;
+    --display: 'Fraunces', serif;
+    --sans: 'Inter', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(99, 102, 241, 0.06), transparent 40%),
+      radial-gradient(circle at 80% 100%, rgba(99, 102, 241, 0.04), transparent 40%);
+    background-attachment: fixed;
+  }
+  .page { max-width: 720px; margin: 0 auto; padding: 56px 32px 96px; }
+
+  /* Header */
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 56px;
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-dim);
+  }
+  .brand-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(38px, 6vw, 56px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+  }
+  h1 em { font-style: italic; color: var(--accent); }
+  .lede {
+    font-size: 17px; color: var(--text-dim);
+    max-width: 560px; line-height: 1.55;
+    margin-bottom: 48px;
+  }
+
+  /* Mode toggle */
+  .mode-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 32px;
+  }
+  .mode-btn {
+    padding: 14px 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+  .mode-btn.active {
+    background: var(--text);
+    color: var(--surface);
+  }
+  .mode-btn-icon {
+    font-size: 18px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* Form */
+  .form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 36px;
+  }
+  .field { margin-bottom: 24px; }
+  .field:last-of-type { margin-bottom: 0; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .label {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .label-text {
+    font-family: var(--mono); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .label-required { font-family: var(--mono); font-size: 10px; color: var(--accent); }
+  .label-hint { font-size: 12px; color: var(--text-faint); }
+
+  input[type="text"], input[type="number"], textarea, select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  textarea { resize: vertical; min-height: 120px; font-family: var(--sans); }
+  ::placeholder { color: var(--text-faint); }
+
+  /* Dropzone */
+  .dropzone {
+    position: relative;
+    border: 1.5px dashed var(--border-strong);
+    border-radius: 6px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg);
+  }
+  .dropzone:hover, .dropzone.dragging { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .dz-primary { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .dz-primary span { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .dz-secondary { font-family: var(--mono); font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .file-preview {
+    display: none; margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    align-items: center; gap: 10px;
+    font-size: 14px;
+  }
+  .file-preview.visible { display: flex; }
+  .file-preview .fp-name { flex: 1; font-weight: 500; }
+  .file-preview .fp-meta { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
+  .file-preview .fp-remove { background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px; }
+
+  /* Color swatches */
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatch {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.1s;
+  }
+  .swatch:hover { transform: scale(1.1); }
+  .swatch.selected { border-color: var(--text); }
+
+  /* Workbook toggle */
+  .workbook-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: #fafafa;
+  }
+  .workbook-toggle:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .workbook-toggle input[type="checkbox"] { display: none; }
+  .toggle-track {
+    flex-shrink: 0;
+    width: 40px;
+    height: 24px;
+    background: #cbd5e1;
+    border-radius: 12px;
+    position: relative;
+    transition: background 0.2s;
+    margin-top: 2px;
+  }
+  .toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .workbook-toggle input:checked + .toggle-track { background: var(--accent); }
+  .workbook-toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(16px); }
+  .toggle-label { display: flex; flex-direction: column; gap: 4px; }
+  .toggle-title { font-weight: 600; font-size: 14px; color: var(--text); }
+  .toggle-desc { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
+
+  /* Submit */
+  .submit-row {
+    margin-top: 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  }
+  .submit-meta {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  button.submit {
+    background: var(--text);
+    color: var(--surface);
+    border: none;
+    padding: 14px 28px;
+    font-family: var(--sans);
+    font-size: 14px; font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  button.submit:hover:not(:disabled) { background: #000; }
+  button.submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .arrow { transition: transform 0.15s; }
+  button.submit:hover:not(:disabled) .arrow { transform: translateX(3px); }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: var(--surface);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error {
+    background: #fef2f2; color: var(--danger);
+    padding: 12px 16px; border-radius: 6px;
+    border: 1px solid #fecaca;
+    font-size: 14px;
+    margin-top: 16px;
+    display: none;
+  }
+  .error.visible { display: block; }
+
+  /* Hidden by default until JS picks mode */
+  .pdf-only, .desc-only { display: none; }
+  body[data-mode="pdf"] .pdf-only { display: block; }
+  body[data-mode="description"] .desc-only { display: block; }
+
+  @media (max-width: 540px) {
+    .page { padding: 36px 18px 64px; }
+    .form { padding: 24px 18px; }
+    .row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body data-mode="pdf">
+  <div class="page">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>CC360 / Course Studio</span>
+    </div>
+
+    <div class="eyebrow">Step 01 — Generate</div>
+    <h1>Build a course<br/>from a <em>PDF</em> or <em>idea</em>.</h1>
+    <p class="lede">
+      Upload existing course material or describe a new course concept. We'll structure
+      it, draft the lessons, and let you review and refine before publishing to your
+      CC360 sub-account.
+    </p>
+
+    <!-- Mode toggle -->
+    <div class="mode-toggle">
+      <button type="button" class="mode-btn active" data-mode="pdf"><span class="mode-btn-icon">📄</span>From PDF</button>
+      <button type="button" class="mode-btn" data-mode="description"><span class="mode-btn-icon">✨</span>From Description</button>
+    </div>
+
+    <form class="form" id="course-form">
+      <!-- COMMON FIELDS -->
+      <div class="field">
+        <div class="label">
+          <span class="label-text">Course Title</span>
+          <span class="label-required">required</span>
+        </div>
+        <input type="text" name="courseTitle" id="courseTitle" placeholder="e.g. Real Estate Investing for Beginners" required />
+      </div>
+
+      <div class="field">
+        <div class="label">
+          <span class="label-text">Target Audience</span>
+          <span class="label-hint">optional</span>
+        </div>
+        <input type="text" name="targetAudience" id="targetAudience" placeholder="e.g. First-time investors with no prior experience" />
+      </div>
+
+      <!-- PDF MODE -->
+      <div class="field pdf-only">
+        <div class="label">
+          <span class="label-text">Course Document</span>
+          <span class="label-required">required</span>
+        </div>
+        <label class="dropzone" id="dropzone">
+          <input type="file" name="pdf" id="pdf-input" accept=".pdf,application/pdf" />
+          <div class="dz-primary">Drop your PDF or <span>browse</span></div>
+          <div class="dz-secondary">PDF · max 25 MB</div>
+        </label>
+        <div class="file-preview" id="file-preview">
+          <span style="font-size:18px;">📄</span>
+          <div style="flex:1;min-width:0;">
+            <div class="fp-name" id="fp-name">—</div>
+            <div class="fp-meta" id="fp-meta">—</div>
+          </div>
+          <button type="button" class="fp-remove" id="fp-remove">✕</button>
+        </div>
+      </div>
+
+      <!-- DESCRIPTION MODE -->
+      <div class="field desc-only">
+        <div class="label">
+          <span class="label-text">Course Description</span>
+          <span class="label-required">required</span>
+        </div>
+        <textarea name="description" id="description" placeholder="Describe what the course should teach. Be specific — the more context you provide, the better the AI can structure the curriculum.&#10;&#10;Example: A practical course teaching first-time real estate investors how to find their first rental property, evaluate deals, secure financing, and manage tenants. Include hands-on examples, common pitfalls, and a beginner-friendly tone."></textarea>
+      </div>
+
+      <div class="row desc-only">
+        <div class="field" style="margin-bottom:0;">
+          <div class="label">
+            <span class="label-text">Modules</span>
+            <span class="label-hint">leave empty for auto</span>
+          </div>
+          <input type="number" name="moduleCount" id="moduleCount" placeholder="Auto (max 5)" min="1" />
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <div class="label">
+            <span class="label-text">Lessons / module</span>
+            <span class="label-hint">leave empty for auto</span>
+          </div>
+          <input type="number" name="lessonsPerModule" id="lessonsPerModule" placeholder="Auto (max 5)" min="1" />
+        </div>
+      </div>
+
+      <!-- COMMON: Instructions, Color -->
+      <div class="field" style="margin-top:24px;">
+        <div class="label">
+          <span class="label-text">Special Instructions</span>
+          <span class="label-hint">optional</span>
+        </div>
+        <textarea name="instructions" id="instructions" placeholder="e.g. Keep tone conversational. Include action steps in each lesson." style="min-height:72px;"></textarea>
+      </div>
+
+      <div class="field">
+        <div class="label">
+          <span class="label-text">Brand Color</span>
+          <span class="label-hint">applies to lesson design</span>
+        </div>
+        <div class="swatches" id="swatches">
+          <button type="button" class="swatch selected" data-color="#6366f1" style="background:#6366f1;"></button>
+          <button type="button" class="swatch" data-color="#0ea5e9" style="background:#0ea5e9;"></button>
+          <button type="button" class="swatch" data-color="#10b981" style="background:#10b981;"></button>
+          <button type="button" class="swatch" data-color="#dc2626" style="background:#dc2626;"></button>
+          <button type="button" class="swatch" data-color="#ea580c" style="background:#ea580c;"></button>
+          <button type="button" class="swatch" data-color="#f59e0b" style="background:#f59e0b;"></button>
+          <button type="button" class="swatch" data-color="#d946ef" style="background:#d946ef;"></button>
+          <button type="button" class="swatch" data-color="#8b5cf6" style="background:#8b5cf6;"></button>
+          <button type="button" class="swatch" data-color="#ec4899" style="background:#ec4899;"></button>
+          <button type="button" class="swatch" data-color="#0f172a" style="background:#0f172a;"></button>
+        </div>
+        <input type="hidden" name="accent" id="accent" value="#6366f1" />
+      </div>
+
+      <div class="field">
+        <div class="label">
+          <span class="label-text">Lesson Workbooks</span>
+          <span class="label-hint">printable PDF per lesson with questions, action items & reflection</span>
+        </div>
+        <label class="workbook-toggle" for="generateWorkbooks">
+          <input type="checkbox" id="generateWorkbooks" name="generateWorkbooks" checked />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          <span class="toggle-label">
+            <span class="toggle-title">Generate workbook PDFs</span>
+            <span class="toggle-desc">A "Download Workbook" button gets added to each lesson page in CC360. Adds ~10-20s to generation.</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="submit-row">
+        <div class="submit-meta">Estimated time: <strong style="color:var(--text-dim);">1–3 min</strong> <span style="opacity:0.7;">(scales with course size)</span></div>
+        <button type="submit" class="submit" id="submit-btn">
+          <span class="btn-label">Generate Outline</span>
+          <span class="arrow">→</span>
+        </button>
+      </div>
+
+      <div class="error" id="error"></div>
+    </form>
+  </div>
+
+<script>
+// ============ Mode toggle ============
+const modeButtons = document.querySelectorAll('.mode-btn');
+modeButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    modeButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.body.dataset.mode = btn.dataset.mode;
+  });
+});
+
+// ============ File upload ============
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('pdf-input');
+const filePreview = document.getElementById('file-preview');
+const fpName = document.getElementById('fp-name');
+const fpMeta = document.getElementById('fp-meta');
+
+['dragenter', 'dragover'].forEach(evt => {
+  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('dragging'); });
+});
+['dragleave', 'drop'].forEach(evt => {
+  dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('dragging'); });
+});
+dropzone.addEventListener('drop', e => {
+  if (e.dataTransfer.files.length) {
+    fileInput.files = e.dataTransfer.files;
+    showFile();
+  }
+});
+fileInput.addEventListener('change', showFile);
+document.getElementById('fp-remove').addEventListener('click', () => {
+  fileInput.value = '';
+  filePreview.classList.remove('visible');
+});
+function showFile() {
+  const f = fileInput.files[0];
+  if (!f) return;
+  fpName.textContent = f.name;
+  fpMeta.textContent = `${(f.size / 1024 / 1024).toFixed(2)} MB`;
+  filePreview.classList.add('visible');
+}
+
+// ============ Color swatches ============
+const swatches = document.querySelectorAll('.swatch');
+const accentInput = document.getElementById('accent');
+swatches.forEach(s => {
+  s.addEventListener('click', () => {
+    swatches.forEach(x => x.classList.remove('selected'));
+    s.classList.add('selected');
+    accentInput.value = s.dataset.color;
+  });
+});
+
+// ============ Form submission ============
+const form = document.getElementById('course-form');
+const submitBtn = document.getElementById('submit-btn');
+const errorBox = document.getElementById('error');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorBox.classList.remove('visible');
+
+  const mode = document.body.dataset.mode;
+
+  // Lightweight validation
+  const courseTitle = document.getElementById('courseTitle').value.trim();
+  if (!courseTitle) return showError('Please enter a course title');
+  if (mode === 'pdf' && !fileInput.files.length) return showError('Please upload a PDF');
+  if (mode === 'description') {
+    const desc = document.getElementById('description').value.trim();
+    if (desc.length < 20) return showError('Please provide a course description (at least 20 characters)');
+  }
+
+  setLoading(true);
+
+  try {
+    const fd = new FormData();
+    fd.append('mode', mode);
+    fd.append('courseTitle', courseTitle);
+    fd.append('targetAudience', document.getElementById('targetAudience').value.trim());
+    fd.append('instructions', document.getElementById('instructions').value.trim());
+    fd.append('accent', accentInput.value);
+    fd.append('generateWorkbooks', document.getElementById('generateWorkbooks').checked ? 'true' : 'false');
+    if (mode === 'pdf') {
+      fd.append('pdf', fileInput.files[0]);
+    } else {
+      fd.append('description', document.getElementById('description').value.trim());
+      const mc = document.getElementById('moduleCount').value;
+      const lpm = document.getElementById('lessonsPerModule').value;
+      if (mc) fd.append('moduleCount', mc);
+      if (lpm) fd.append('lessonsPerModule', lpm);
+    }
+
+    const res = await fetch('/api/generate', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
+    // Redirect to preview page
+    window.location.href = `/preview/${data.draftId}`;
+  } catch (err) {
+    showError(err.message);
+    setLoading(false);
+  }
+});
+
+function setLoading(loading) {
+  submitBtn.disabled = loading;
+  const label = submitBtn.querySelector('.btn-label');
+  const arrow = submitBtn.querySelector('.arrow');
+  if (loading) {
+    label.textContent = 'Generating outline…';
+    arrow.innerHTML = '<span class="spinner"></span>';
+  } else {
+    label.textContent = 'Generate Outline';
+    arrow.textContent = '→';
+  }
+}
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.classList.add('visible');
+}
+</script>
+</body>
+</html>

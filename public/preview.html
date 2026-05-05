@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Course Studio — Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --surface-2: #f5f5f0;
+    --border: #e5e5e0;
+    --border-strong: #d4d4d0;
+    --text: #1a1a1a;
+    --text-dim: #525252;
+    --text-faint: #8a8a85;
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --accent-soft: #eef2ff;
+    --danger: #dc2626;
+    --success: #16a34a;
+    --display: 'Fraunces', serif;
+    --sans: 'Inter', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  #root { height: 100vh; }
+
+  /* Header */
+  .header {
+    height: 60px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .brand-dot {
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+  }
+  .header-spacer { flex: 1; }
+  .header-controls { display: flex; align-items: center; gap: 12px; }
+  .regen-counter {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .regen-counter strong { color: var(--text); }
+
+  /* Buttons */
+  .btn {
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--text); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--text);
+    color: var(--surface);
+    border-color: var(--text);
+  }
+  .btn-primary:hover:not(:disabled) { background: #000; }
+  .btn-accent {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .btn-accent:hover:not(:disabled) { background: var(--accent-hover); }
+
+  /* Main layout: 3 columns */
+  .main {
+    height: calc(100vh - 60px);
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    overflow: hidden;
+  }
+
+  /* Left sidebar — outline */
+  .sidebar-left {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 16px;
+  }
+  .course-title-input {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.2;
+    border: none;
+    background: transparent;
+    width: 100%;
+    padding: 4px 0;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .course-title-input:focus {
+    outline: none;
+    border-bottom: 1px solid var(--accent);
+  }
+  .course-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  .module {
+    margin-bottom: 6px;
+    border-radius: 6px;
+  }
+  .module-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .module-header:hover { background: var(--surface-2); }
+  .module-arrow {
+    font-size: 10px;
+    transition: transform 0.15s;
+    color: var(--text-faint);
+  }
+  .module-arrow.open { transform: rotate(90deg); }
+  .module-title-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    padding: 2px 0;
+  }
+  .module-title-input:focus { outline: none; color: var(--accent); }
+  .lessons {
+    margin-left: 18px;
+    padding-left: 8px;
+    border-left: 1px solid var(--border);
+  }
+  .lesson {
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 2px 0;
+    transition: background 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .lesson:hover { background: var(--surface-2); }
+  .lesson.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .lesson-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    min-width: 14px;
+  }
+  .lesson.active .lesson-num { color: var(--accent); }
+
+  /* Center pane — preview + editor */
+  .center {
+    overflow-y: auto;
+    background: var(--bg);
+    padding: 28px 32px 60px;
+  }
+  .center-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    width: fit-content;
+  }
+  .tab-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 5px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+  }
+  .tab-btn.active { background: var(--text); color: var(--surface); }
+
+  .preview-frame {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 36px 32px;
+    min-height: 500px;
+  }
+
+  /* Editor */
+  .editor h3 {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin: 24px 0 8px 0;
+  }
+  .editor h3:first-child { margin-top: 0; }
+  .editor input[type="text"], .editor textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .editor input:focus, .editor textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .editor textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+  .item-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .item-row > input, .item-row > textarea { flex: 1; margin-bottom: 0; }
+  .icon-btn {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    width: 36px; height: 36px;
+    cursor: pointer;
+    color: var(--text-dim);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover { border-color: var(--danger); color: var(--danger); }
+  .add-btn {
+    background: transparent;
+    border: 1px dashed var(--border-strong);
+    border-radius: 6px;
+    padding: 10px;
+    width: 100%;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+  .add-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    border-style: solid;
+  }
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .section-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .section-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Right sidebar — controls */
+  .sidebar-right {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 18px;
+  }
+  .control-section {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+  .control-section:last-child { border-bottom: none; margin-bottom: 0; }
+  .control-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatch {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.1s;
+  }
+  .swatch:hover { transform: scale(1.1); }
+  .swatch.selected { border-color: var(--text); }
+
+  /* Status panel */
+  .status-success {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .status-success h4 {
+    color: var(--success);
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .status-success p {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .status-success a {
+    color: var(--success);
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 13px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--text);
+    color: var(--surface);
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    animation: slideUp 0.2s ease-out;
+    z-index: 1000;
+  }
+  .toast.error { background: var(--danger); }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 100;
+  }
+  .spinner-big {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+const SWATCHES = [
+  '#6366f1', '#0ea5e9', '#10b981', '#dc2626',
+  '#ea580c', '#f59e0b', '#d946ef', '#8b5cf6', '#ec4899', '#0f172a',
+];
+
+function App() {
+  const draftId = window.location.pathname.split('/').pop();
+  const [draft, setDraft] = useState(null);
+  const [accent, setAccent] = useState('#6366f1');
+  const [regen, setRegen] = useState({ used: 0, remaining: 3, limit: 3 });
+  const [activeIdx, setActiveIdx] = useState({ m: 0, l: 0 });
+  const [openModules, setOpenModules] = useState(new Set([0]));
+  const [tab, setTab] = useState('preview');
+  const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState('');
+  const [toast, setToast] = useState(null);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [pushed, setPushed] = useState(null);
+  const saveTimer = useRef(null);
+
+  // Initial load
+  useEffect(() => {
+    fetch(`/api/draft/${draftId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { showToast(data.error, true); return; }
+        setDraft(data.structure);
+        setAccent(data.accent || '#6366f1');
+        setRegen(data.regen);
+        if (data.cc360) setPushed(data.cc360);
+      })
+      .catch(e => showToast(e.message, true));
+  }, [draftId]);
+
+  // Re-render preview when active lesson or accent changes
+  useEffect(() => {
+    if (!draft) return;
+    const lesson = draft.modules?.[activeIdx.m]?.lessons?.[activeIdx.l];
+    if (!lesson) return;
+    fetch('/api/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lesson, accent, withWorkbook: !!lesson.workbook }),
+    })
+      .then(r => r.json())
+      .then(data => setPreviewHtml(data.html || ''))
+      .catch(() => {});
+  }, [draft, activeIdx, accent]);
+
+  // Auto-save edits (debounced)
+  useEffect(() => {
+    if (!draft) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      fetch(`/api/draft/${draftId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ structure: draft, accent }),
+      });
+    }, 600);
+  }, [draft, accent, draftId]);
+
+  function showToast(msg, isError = false) {
+    setToast({ msg, isError });
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  // Update functions
+  function updateCourse(field, value) {
+    setDraft({ ...draft, [field]: value });
+  }
+  function updateModule(mi, field, value) {
+    const next = { ...draft, modules: [...draft.modules] };
+    next.modules[mi] = { ...next.modules[mi], [field]: value };
+    setDraft(next);
+  }
+  function updateLesson(mi, li, field, value) {
+    const next = { ...draft, modules: [...draft.modules] };
+    next.modules[mi] = {
+      ...next.modules[mi],
+      lessons: [...next.modules[mi].lessons],
+    };
+    next.modules[mi].lessons[li] = { ...next.modules[mi].lessons[li], [field]: value };
+    setDraft(next);
+  }
+  function updateTakeaway(mi, li, ti, value) {
+    const next = structuredClone(draft);
+    next.modules[mi].lessons[li].keyTakeaways[ti] = value;
+    setDraft(next);
+  }
+  function addTakeaway(mi, li) {
+    const next = structuredClone(draft);
+    if (!next.modules[mi].lessons[li].keyTakeaways) next.modules[mi].lessons[li].keyTakeaways = [];
+    next.modules[mi].lessons[li].keyTakeaways.push('New takeaway');
+    setDraft(next);
+  }
+  function removeTakeaway(mi, li, ti) {
+    const next = structuredClone(draft);
+    next.modules[mi].lessons[li].keyTakeaways.splice(ti, 1);
+    setDraft(next);
+  }
+  function updateSection(mi, li, si, field, value) {
+    const next = structuredClone(draft);
+    next.modules[mi].lessons[li].sections[si][field] = value;
+    setDraft(next);
+  }
+  function addSection(mi, li) {
+    const next = structuredClone(draft);
+    if (!next.modules[mi].lessons[li].sections) next.modules[mi].lessons[li].sections = [];
+    next.modules[mi].lessons[li].sections.push({ heading: 'New section', body: 'Section content goes here.' });
+    setDraft(next);
+  }
+  function removeSection(mi, li, si) {
+    const next = structuredClone(draft);
+    next.modules[mi].lessons[li].sections.splice(si, 1);
+    setDraft(next);
+  }
+
+  // Regenerate
+  async function regenerate() {
+    if (regen.remaining <= 0) {
+      showToast('Regenerate limit reached for this sub-account', true);
+      return;
+    }
+    setLoading(true);
+    setLoadingText('Regenerating with AI…');
+    try {
+      const res = await fetch(`/api/regenerate/${draftId}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Regeneration failed');
+      setDraft(data.structure);
+      setRegen(data.regen);
+      setActiveIdx({ m: 0, l: 0 });
+      setOpenModules(new Set([0]));
+      showToast(`Regenerated. ${data.regen.remaining}/${data.regen.limit} regenerations remaining.`);
+    } catch (e) {
+      showToast(e.message, true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Push to CC360
+  async function pushToCC360() {
+    if (!confirm('Push this course to CC360? This will create a new course in your sub-account.')) return;
+    setLoading(true);
+    setLoadingText('Importing to CC360…');
+    try {
+      const res = await fetch(`/api/push/${draftId}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Push failed');
+      setPushed(data);
+      showToast('Course imported! Check your CC360 dashboard.');
+    } catch (e) {
+      showToast(e.message, true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggleModule(mi) {
+    const next = new Set(openModules);
+    if (next.has(mi)) next.delete(mi); else next.add(mi);
+    setOpenModules(next);
+  }
+
+  if (!draft) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+        <div className="spinner-big"></div>
+        <div className="loading-text">Loading draft…</div>
+      </div>
+    );
+  }
+
+  const activeLesson = draft.modules?.[activeIdx.m]?.lessons?.[activeIdx.l];
+
+  return (
+    <>
+      <div className="header">
+        <div className="brand">
+          <span className="brand-dot"></span>
+          <span>CC360 / Course Studio</span>
+        </div>
+        <div className="header-spacer"></div>
+        <div className="header-controls">
+          <span className="regen-counter">Regens: <strong>{regen.remaining}</strong>/{regen.limit}</span>
+          <button className="btn" onClick={regenerate} disabled={regen.remaining <= 0 || loading}>
+            ↻ Regenerate
+          </button>
+          {pushed
+            ? <a className="btn btn-accent" href={pushed.url} target="_blank" rel="noopener" style={{ textDecoration: 'none' }}>↗ Open in CC360</a>
+            : <button className="btn btn-primary" onClick={pushToCC360} disabled={loading}>
+                ✓ Push to CC360
+              </button>
+          }
+        </div>
+      </div>
+
+      <div className="main">
+        {/* LEFT — outline */}
+        <div className="sidebar-left">
+          <input
+            className="course-title-input"
+            value={draft.courseTitle || ''}
+            onChange={e => updateCourse('courseTitle', e.target.value)}
+            placeholder="Course title"
+          />
+          <div className="course-desc">{draft.courseDescription}</div>
+
+          {(draft.modules || []).map((m, mi) => (
+            <div className="module" key={mi}>
+              <div className="module-header" onClick={() => toggleModule(mi)}>
+                <span className={`module-arrow ${openModules.has(mi) ? 'open' : ''}`}>▶</span>
+                <input
+                  className="module-title-input"
+                  value={m.title}
+                  onChange={e => updateModule(mi, 'title', e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                />
+              </div>
+              {openModules.has(mi) && (
+                <div className="lessons">
+                  {(m.lessons || []).map((l, li) => (
+                    <div
+                      key={li}
+                      className={`lesson ${activeIdx.m === mi && activeIdx.l === li ? 'active' : ''}`}
+                      onClick={() => setActiveIdx({ m: mi, l: li })}
+                    >
+                      <span className="lesson-num">{li + 1}</span>
+                      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {l.title}
+                      </span>
+                      {l.workbook && (
+                        <span
+                          title="Has a downloadable workbook"
+                          style={{ fontSize: 11, opacity: 0.7, marginLeft: 6 }}
+                        >📄</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* CENTER — preview / editor */}
+        <div className="center">
+          <div className="center-tabs">
+            <button className={`tab-btn ${tab === 'preview' ? 'active' : ''}`} onClick={() => setTab('preview')}>Preview</button>
+            <button className={`tab-btn ${tab === 'edit' ? 'active' : ''}`} onClick={() => setTab('edit')}>Edit</button>
+          </div>
+
+          {tab === 'preview' && (
+            <div className="preview-frame" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          )}
+
+          {tab === 'edit' && activeLesson && (
+            <div className="editor">
+              <h3>Lesson Title</h3>
+              <input
+                type="text"
+                value={activeLesson.title || ''}
+                onChange={e => updateLesson(activeIdx.m, activeIdx.l, 'title', e.target.value)}
+              />
+
+              <h3>Summary</h3>
+              <textarea
+                value={activeLesson.summary || ''}
+                onChange={e => updateLesson(activeIdx.m, activeIdx.l, 'summary', e.target.value)}
+              />
+
+              <h3>Key Takeaways</h3>
+              {(activeLesson.keyTakeaways || []).map((t, ti) => (
+                <div className="item-row" key={ti}>
+                  <input
+                    type="text"
+                    value={t}
+                    onChange={e => updateTakeaway(activeIdx.m, activeIdx.l, ti, e.target.value)}
+                  />
+                  <button className="icon-btn" onClick={() => removeTakeaway(activeIdx.m, activeIdx.l, ti)}>✕</button>
+                </div>
+              ))}
+              <button className="add-btn" onClick={() => addTakeaway(activeIdx.m, activeIdx.l)}>+ Add takeaway</button>
+
+              <h3>Sections</h3>
+              {(activeLesson.sections || []).map((s, si) => (
+                <div className="section-card" key={si}>
+                  <div className="section-card-header">
+                    <span className="section-num">Section {si + 1}</span>
+                    <button className="icon-btn" onClick={() => removeSection(activeIdx.m, activeIdx.l, si)}>✕</button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Section heading"
+                    value={s.heading || ''}
+                    onChange={e => updateSection(activeIdx.m, activeIdx.l, si, 'heading', e.target.value)}
+                  />
+                  <textarea
+                    placeholder="Section body (use <strong>bold</strong> and <em>italic</em>)"
+                    value={s.body || ''}
+                    onChange={e => updateSection(activeIdx.m, activeIdx.l, si, 'body', e.target.value)}
+                    style={{ minHeight: 100 }}
+                  />
+                </div>
+              ))}
+              <button className="add-btn" onClick={() => addSection(activeIdx.m, activeIdx.l)}>+ Add section</button>
+
+              <h3>Pro Tip</h3>
+              <textarea
+                value={activeLesson.proTip || ''}
+                onChange={e => updateLesson(activeIdx.m, activeIdx.l, 'proTip', e.target.value)}
+                placeholder="Optional actionable tip"
+              />
+
+              <h3>Reflection Question</h3>
+              <textarea
+                value={activeLesson.reflection || ''}
+                onChange={e => updateLesson(activeIdx.m, activeIdx.l, 'reflection', e.target.value)}
+                placeholder="Optional thought-provoking question"
+              />
+
+              {activeLesson.workbook && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border)' }}>
+                    <h3 style={{ margin: 0 }}>📄 Workbook PDF</h3>
+                    <a
+                      href={`/api/preview-pdf/${draftId}/${activeIdx.m}/${activeIdx.l}`}
+                      target="_blank"
+                      rel="noopener"
+                      style={{
+                        background: 'var(--accent)', color: 'white', textDecoration: 'none',
+                        padding: '8px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+                      }}
+                    >Preview PDF →</a>
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4, marginBottom: 16 }}>
+                    A "Download Workbook" button will be added to the bottom of this lesson in CC360.
+                  </p>
+
+                  <h4 style={{ fontSize: 13, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 16, marginBottom: 8 }}>Questions</h4>
+                  {(activeLesson.workbook.questions || []).map((q, qi) => (
+                    <textarea
+                      key={qi}
+                      value={q}
+                      onChange={e => {
+                        const next = JSON.parse(JSON.stringify(draft));
+                        next.modules[activeIdx.m].lessons[activeIdx.l].workbook.questions[qi] = e.target.value;
+                        setDraft(next);
+                      }}
+                      style={{ marginBottom: 6 }}
+                    />
+                  ))}
+
+                  <h4 style={{ fontSize: 13, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 16, marginBottom: 8 }}>Action Items</h4>
+                  {(activeLesson.workbook.actionItems || []).map((a, ai) => (
+                    <input
+                      type="text"
+                      key={ai}
+                      value={a}
+                      onChange={e => {
+                        const next = JSON.parse(JSON.stringify(draft));
+                        next.modules[activeIdx.m].lessons[activeIdx.l].workbook.actionItems[ai] = e.target.value;
+                        setDraft(next);
+                      }}
+                      style={{ marginBottom: 6 }}
+                    />
+                  ))}
+
+                  <h4 style={{ fontSize: 13, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 16, marginBottom: 8 }}>Reflection Prompt</h4>
+                  <textarea
+                    value={activeLesson.workbook.reflection || ''}
+                    onChange={e => {
+                      const next = JSON.parse(JSON.stringify(draft));
+                      next.modules[activeIdx.m].lessons[activeIdx.l].workbook.reflection = e.target.value;
+                      setDraft(next);
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT — controls */}
+        <div className="sidebar-right">
+          {pushed && (
+            <div className="status-success">
+              <h4>✓ Course in CC360</h4>
+              <p>{pushed.title}</p>
+              {pushed.workbooks && pushed.workbooks.total > 0 && (
+                <p style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>
+                  📄 {pushed.workbooks.succeeded}/{pushed.workbooks.total} workbook PDFs uploaded
+                  {pushed.workbooks.failed > 0 && <span style={{ color: '#dc2626' }}> ({pushed.workbooks.failed} failed)</span>}
+                </p>
+              )}
+              <a href={pushed.url} target="_blank" rel="noopener">Open course →</a>
+            </div>
+          )}
+
+          <div className="control-section">
+            <div className="control-label">Brand Color</div>
+            <div className="swatches">
+              {SWATCHES.map(c => (
+                <button
+                  key={c}
+                  className={`swatch ${accent === c ? 'selected' : ''}`}
+                  style={{ background: c }}
+                  onClick={() => setAccent(c)}
+                />
+              ))}
+            </div>
+            <input
+              type="color"
+              value={accent}
+              onChange={e => setAccent(e.target.value)}
+              style={{ marginTop: 12, width: '100%', height: 32, border: '1px solid var(--border-strong)', borderRadius: 6, cursor: 'pointer' }}
+            />
+          </div>
+
+          <div className="control-section">
+            <div className="control-label">Stats</div>
+            <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.7 }}>
+              <div>Modules: <strong style={{ color: 'var(--text)' }}>{draft.modules?.length || 0}</strong></div>
+              <div>Lessons: <strong style={{ color: 'var(--text)' }}>{(draft.modules || []).reduce((sum, m) => sum + (m.lessons?.length || 0), 0)}</strong></div>
+            </div>
+          </div>
+
+          <div className="control-section">
+            <div className="control-label">Next Steps</div>
+            <p style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 12 }}>
+              Edit lessons in the center pane. Changes auto-save. When you're happy, click <strong>Push to CC360</strong>.
+            </p>
+            <a href="/" className="btn" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>← Start over</a>
+          </div>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="loading-overlay">
+          <div className="spinner-big"></div>
+          <div className="loading-text">{loadingText}</div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`toast ${toast.isError ? 'error' : ''}`}>{toast.msg}</div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

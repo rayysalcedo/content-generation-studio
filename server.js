@@ -327,14 +327,16 @@ app.put('/api/draft/:draftId', (req, res) => {
 // API: Render a single lesson to styled HTML (for live preview)
 // ---------------------------------------------------------------------
 app.post('/api/render', (req, res) => {
-  const { lesson, accent, withWorkbook } = req.body;
+  const { lesson, accent, withWorkbook, draftId, mi, li } = req.body;
   if (!lesson) return res.status(400).json({ error: 'lesson is required' });
   const theme = buildTheme(accent || '#6366f1');
-  // Use a placeholder URL so the user can see what the button will look like in preview
-  const opts = withWorkbook && lesson.workbook ? { workbookUrl: '#preview-only' } : {};
+  // Wire the preview button to the actual PDF endpoint when we have draft coordinates.
+  // After push to CC360, this gets replaced with the real media library URL.
+  const opts = (withWorkbook && lesson.workbook && draftId !== undefined && mi !== undefined && li !== undefined)
+    ? { workbookUrl: `/api/preview-pdf/${draftId}/${mi}/${li}` }
+    : {};
   res.json({ html: renderLessonHTML(lesson, theme, opts) });
 });
-
 // ---------------------------------------------------------------------
 // API: Preview a lesson's workbook PDF (renders on-demand)
 // ---------------------------------------------------------------------

@@ -475,19 +475,26 @@ function App() {
   }, [draftId]);
 
   // Re-render preview when active lesson or accent changes
-  useEffect(() => {
+useEffect(() => {
     if (!draft) return;
     const lesson = draft.modules?.[activeIdx.m]?.lessons?.[activeIdx.l];
     if (!lesson) return;
     fetch('/api/render', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lesson, accent, withWorkbook: !!lesson.workbook }),
+      body: JSON.stringify({
+        lesson,
+        accent,
+        withWorkbook: !!lesson.workbook,
+        draftId,
+        mi: activeIdx.m,
+        li: activeIdx.l,
+      }),
     })
       .then(r => r.json())
       .then(data => setPreviewHtml(data.html || ''))
       .catch(() => {});
-  }, [draft, activeIdx, accent]);
+  }, [draft, activeIdx, accent, draftId]);
 
   // Auto-save edits (debounced)
   useEffect(() => {

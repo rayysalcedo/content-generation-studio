@@ -1,6 +1,6 @@
 {
   "name": "cc360-pdf-to-course",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "CC360 Course Studio — OAuth-enabled agency tool. All-OpenAI: generates courses, workbooks, and AI thumbnails into any authorized sub-account.",
   "main": "server.js",
   "type": "module",

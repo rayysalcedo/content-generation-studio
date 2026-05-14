@@ -18,7 +18,7 @@ import { generateThumbnailsForCourse, base64ToBuffer } from './lib/generate-thum
 import { renderLessonHTML, buildTheme } from './lib/render-html.js';
 import { renderWorkbookPdf } from './lib/pdf-renderer.js';
 import { uploadToMediaLibrary } from './lib/upload-media.js';
-import { importCourse } from './lib/cc360.js';
+import { importCourse, attachThumbnails } from './lib/cc360.js';
 import {
   buildAuthorizeUrl, exchangeCodeForToken, getValidTokenForLocation,
   newState, consumeState,
@@ -460,7 +460,7 @@ app.put('/api/draft/:draftId', (req, res) => {
 // API: Render a single lesson to styled HTML (for live preview)
 // ---------------------------------------------------------------------
 app.post('/api/render', (req, res) => {
-  const { lesson, accent, withWorkbook, withThumbnail, draftId, mi, li } = req.body;
+  const { lesson, accent, withWorkbook, draftId, mi, li } = req.body;
   if (!lesson) return res.status(400).json({ error: 'lesson is required' });
   const theme = buildTheme(accent || '#6366f1');
   const opts = {};
@@ -468,13 +468,7 @@ app.post('/api/render', (req, res) => {
   if (withWorkbook && lesson.workbook && draftId !== undefined && mi !== undefined && li !== undefined) {
     opts.workbookUrl = `/api/preview-pdf/${draftId}/${mi}/${li}`;
   }
-  // Wire lesson thumbnail to live preview endpoint when one exists for this lesson
-  if (withThumbnail && draftId !== undefined && mi !== undefined && li !== undefined) {
-    const draft = drafts.get(draftId);
-    if (draft?.thumbnails?.[`m${mi}-l${li}`]) {
-      opts.thumbnailUrl = `/api/preview-thumbnail/${draftId}/m${mi}-l${li}`;
-    }
-  }
+  // (Thumbnails go to the proper sidebar field on push — not embedded in body.)
   res.json({ html: renderLessonHTML(lesson, theme, opts) });
 });
 
@@ -624,7 +618,9 @@ app.post('/api/push/:draftId', async (req, res) => {
       }
     }
 
-    // 2. Import the course with workbook URLs + lesson thumbnail URLs threaded into lesson HTML
+    // 2. Import the course skeleton (workbook URLs threaded into lesson HTML).
+    // Lesson + course thumbnails get attached SEPARATELY via attachThumbnails() below,
+    // because they go to the proper sidebar fields (different API), not the body HTML.
     console.log(`📚 Importing course to CC360 sub-account ${draftLocationId}...`);
     const result = await importCourse({
       pit: authToken,
@@ -632,19 +628,51 @@ app.post('/api/push/:draftId', async (req, res) => {
       draft: draft.structure,
       accent,
       workbookUrlByLessonKey,
-      thumbnailUrlByLessonKey,
     });
     console.log(`   ✓ Course created: ${result.url}`);
+
+    // 3. Attach thumbnails to the proper Course Thumbnail + Lesson Thumbnail fields
+    let thumbnailAttachResults = null;
+    if (courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0) {
+      console.log(`🖼️  Attaching thumbnails to sidebar fields (polling for course readiness)...`);
+      try {
+        thumbnailAttachResults = await attachThumbnails({
+          token: authToken,
+          locationId: draftLocationId,
+          productId: result.id,
+          courseTitle: draft.structure.courseTitle,
+          courseDescription: draft.structure.courseDescription || `Course built on ${new Date().toLocaleDateString()}`,
+          courseThumbnailUrl,
+          lessonThumbnailMap: thumbnailUrlByLessonKey,
+          onProgress: (p) => {
+            if (p.phase === 'polling') {
+              console.log(`   ⏳ waiting for lessons... (${p.totalPosts}/${p.expected})`);
+            } else if (p.phase === 'course-attached') {
+              console.log(`   ✓ Course thumbnail attached`);
+            } else if (p.phase === 'course-failed') {
+              console.warn(`   ✗ Course thumbnail attach failed`);
+            } else if (p.phase === 'lessons-done') {
+              console.log(`   ✓ Lesson thumbnails: ${p.ok}/${p.total} attached`);
+            }
+          },
+        });
+      } catch (e) {
+        console.warn(`⚠️  Thumbnail attach phase failed entirely: ${e.message}`);
+        thumbnailAttachResults = { error: e.message };
+      }
+    }
 
     draft.pushedAt = Date.now();
     draft.cc360 = result;
     draft.uploadResults = uploadResults;
     draft.courseThumbnailUrl = courseThumbnailUrl;
+    draft.thumbnailAttachResults = thumbnailAttachResults;
     drafts.set(draftId, draft);
 
     res.json({
       ...result,
-      courseThumbnailUrl,           // 👈 paste this into the course cover field in CC360
+      courseThumbnailUrl,
+      thumbnailAttach: thumbnailAttachResults,
       workbooks: {
         total: totalToUpload,
         succeeded: uploadResults.filter(r => r.ok && !r.key.startsWith('thumb:')).length,
@@ -655,6 +683,7 @@ app.post('/api/push/:draftId', async (req, res) => {
         course: courseThumbnailUrl,
         lessons: thumbnailUrlByLessonKey,
         results: uploadResults.filter(r => r.key.startsWith('thumb:')),
+        attached: thumbnailAttachResults,
       },
     });
   } catch (err) {

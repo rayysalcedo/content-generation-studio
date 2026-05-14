@@ -29,6 +29,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const {
   CC360_JWT,                                  // Legacy PIT fallback (single-account use)
+  CC360_USER_JWT,                             // User-session JWT for INTERNAL backend.* API (thumbnail attach only)
   CC360_LOCATION_ID,                          // Optional fallback (used by CLI / when form leaves it empty)
   OPENAI_API_KEY,                             // The one and only AI provider key now
   OPENAI_TEXT_MODEL = 'gpt-5.4-mini',         // Course structure + workbook generation
@@ -618,9 +619,10 @@ app.post('/api/push/:draftId', async (req, res) => {
       }
     }
 
-    // 2. Import the course skeleton (workbook URLs threaded into lesson HTML).
-    // Lesson + course thumbnails get attached SEPARATELY via attachThumbnails() below,
-    // because they go to the proper sidebar fields (different API), not the body HTML.
+    // 2. Import the course with thumbnails baked into the payload.
+    // The import endpoint MAY honor `posterImage` on products and posts — if so, thumbnails
+    // attach during create and we're done. If not, attachThumbnails() below runs as a
+    // best-effort fallback (only if CC360_USER_JWT is configured for backend.* auth).
     console.log(`📚 Importing course to CC360 sub-account ${draftLocationId}...`);
     const result = await importCourse({
       pit: authToken,
@@ -628,16 +630,24 @@ app.post('/api/push/:draftId', async (req, res) => {
       draft: draft.structure,
       accent,
       workbookUrlByLessonKey,
+      courseThumbnailUrl,
+      thumbnailUrlByLessonKey,
     });
     console.log(`   ✓ Course created: ${result.url}`);
-
-    // 3. Attach thumbnails to the proper Course Thumbnail + Lesson Thumbnail fields
-    let thumbnailAttachResults = null;
     if (courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0) {
-      console.log(`🖼️  Attaching thumbnails to sidebar fields (polling for course readiness)...`);
+      console.log(`   (posterImage fields included in import payload — open the course in CC360 to verify they took effect)`);
+    }
+
+    // 3. Optional fallback: attach thumbnails via the internal backend API.
+    // Only runs if CC360_USER_JWT is set (the import-level posterImage approach is preferred).
+    let thumbnailAttachResults = null;
+    const hasThumbnailsToAttach = courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0;
+    if (hasThumbnailsToAttach && CC360_USER_JWT) {
+      console.log(`🖼️  Running fallback thumbnail attach (CC360_USER_JWT is set)...`);
       try {
         thumbnailAttachResults = await attachThumbnails({
           token: authToken,
+          backendToken: CC360_USER_JWT,
           locationId: draftLocationId,
           productId: result.id,
           courseTitle: draft.structure.courseTitle,
@@ -650,16 +660,16 @@ app.post('/api/push/:draftId', async (req, res) => {
             } else if (p.phase === 'polling-retry') {
               console.log(`   ⏳ poll attempt failed (will retry): ${p.error}`);
             } else if (p.phase === 'course-attached') {
-              console.log(`   ✓ Course thumbnail attached`);
+              console.log(`   ✓ Course thumbnail attached (fallback)`);
             } else if (p.phase === 'course-failed') {
               console.warn(`   ✗ Course thumbnail attach failed: ${JSON.stringify(p.error)}`);
             } else if (p.phase === 'lessons-done') {
-              console.log(`   ✓ Lesson thumbnails: ${p.ok}/${p.total} attached`);
+              console.log(`   ✓ Lesson thumbnails: ${p.ok}/${p.total} attached (fallback)`);
             }
           },
         });
       } catch (e) {
-        console.warn(`⚠️  Thumbnail attach phase failed entirely: ${e.message}`);
+        console.warn(`⚠️  Fallback attach failed: ${e.message}`);
         thumbnailAttachResults = { error: e.message };
       }
     }
@@ -862,5 +872,23 @@ app.listen(PORT, () => {
   } else {
     console.log(` Image AI:          ⚠️  OPENAI_API_KEY not set — thumbnails will be skipped`);
   }
+  if (CC360_USER_JWT) {
+    const expiry = decodeJwtExp(CC360_USER_JWT);
+    if (expiry) {
+      const mins = Math.round((expiry - Date.now()) / 60000);
+      console.log(` Backend JWT:       ✅ set (expires ${mins > 0 ? `in ${mins} min` : `${-mins} min AGO — REFRESH IT`})`);
+    } else {
+      console.log(` Backend JWT:       ✅ set (couldn't parse expiry)`);
+    }
+  } else {
+    console.log(` Backend JWT:       ⚠️  CC360_USER_JWT not set — thumbnail attach will 401 on backend.*`);
+  }
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 });
+
+function decodeJwtExp(jwt) {
+  try {
+    const payload = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64').toString());
+    return payload.exp ? Math.round(payload.exp * 1000) : null;
+  } catch { return null; }
+}

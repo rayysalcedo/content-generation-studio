@@ -1,7 +1,7 @@
 {
   "name": "cc360-pdf-to-course",
-  "version": "3.0.0",
-  "description": "CC360 Course Studio — OAuth-enabled agency tool. Generates courses, workbooks, and AI thumbnails into any authorized sub-account.",
+  "version": "3.1.0",
+  "description": "CC360 Course Studio — OAuth-enabled agency tool. All-OpenAI: generates courses, workbooks, and AI thumbnails into any authorized sub-account.",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -10,7 +10,6 @@
     "cli": "node build-course.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",

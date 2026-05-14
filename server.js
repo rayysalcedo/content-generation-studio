@@ -30,13 +30,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const {
   CC360_JWT,                                  // Legacy PIT fallback (single-account use)
   CC360_LOCATION_ID,                          // Optional fallback (used by CLI / when form leaves it empty)
-  GEMINI_API_KEY,
-  GEMINI_MODEL = 'gemini-2.0-flash',
-  OPENAI_API_KEY,                             // Used for image generation (course + lesson thumbnails)
-  OPENAI_IMAGE_MODEL = 'gpt-image-1-mini',    // 'gpt-image-1-mini' | 'gpt-image-1.5' | 'gpt-image-2'
+  OPENAI_API_KEY,                             // The one and only AI provider key now
+  OPENAI_TEXT_MODEL = 'gpt-5.4-mini',         // Course structure + workbook generation
+  OPENAI_IMAGE_MODEL = 'gpt-image-1-mini',    // Thumbnail generation
   OPENAI_IMAGE_QUALITY = 'medium',            // 'low' | 'medium' | 'high'
-  GHL_CLIENT_ID,                              // OAuth: Agency Marketplace App client ID
-  GHL_CLIENT_SECRET,                          // OAuth: Agency Marketplace App client secret
+  GHL_CLIENT_ID,                              // OAuth: Sub-Account Marketplace App client ID
+  GHL_CLIENT_SECRET,                          // OAuth: Sub-Account Marketplace App client secret
   GHL_OAUTH_REDIRECT_URI,                     // OAuth: e.g. https://your-app.onrender.com/oauth/callback
   GHL_OAUTH_SCOPES = 'medias.readonly medias.write courses.readonly courses.write locations.readonly',
   PORT = 3000,
@@ -47,15 +46,15 @@ const {
 const DEFAULT_MODULE_COUNT = 5;
 const DEFAULT_LESSONS_PER_MODULE = 5;
 
-if (!GEMINI_API_KEY) {
-  console.error('❌ Missing required env var: GEMINI_API_KEY');
+if (!OPENAI_API_KEY) {
+  console.error('❌ Missing required env var: OPENAI_API_KEY');
   process.exit(1);
 }
 const oauthConfigured = !!(GHL_CLIENT_ID && GHL_CLIENT_SECRET && GHL_OAUTH_REDIRECT_URI);
 if (!CC360_JWT && !oauthConfigured) {
   console.error('❌ No CC360 auth configured. Set either:');
   console.error('   • CC360_JWT (PIT, legacy single-account), OR');
-  console.error('   • GHL_CLIENT_ID + GHL_CLIENT_SECRET + GHL_OAUTH_REDIRECT_URI (OAuth, agency-wide)');
+  console.error('   • GHL_CLIENT_ID + GHL_CLIENT_SECRET + GHL_OAUTH_REDIRECT_URI (OAuth, multi-tenant)');
   process.exit(1);
 }
 
@@ -233,8 +232,8 @@ app.post('/api/generate', upload.single('pdf'), async (req, res) => {
     // 1. Generate course structure (existing)
     console.log(`📚 Generating course structure for "${courseTitle}" (${resolvedModuleCount} × ${resolvedLessonsPerModule})...`);
     const structure = await generateCourseStructure({
-      apiKey: GEMINI_API_KEY,
-      model: GEMINI_MODEL,
+      apiKey: OPENAI_API_KEY,
+      model: OPENAI_TEXT_MODEL,
       mode,
       sourceText,
       courseTitle,
@@ -254,8 +253,8 @@ app.post('/api/generate', upload.single('pdf'), async (req, res) => {
     if (wantWorkbooks && totalLessons > 0) {
       console.log(`📝 Generating workbook content for ${totalLessons} lessons (parallel batches)...`);
       const r = await generateWorkbooksForCourse({
-        apiKey: GEMINI_API_KEY,
-        model: GEMINI_MODEL,
+        apiKey: OPENAI_API_KEY,
+        model: OPENAI_TEXT_MODEL,
         structure,
         onProgress: ({ done, total, failed }) => {
           // Throttle log noise — log every 5
@@ -342,19 +341,22 @@ app.post('/api/generate', upload.single('pdf'), async (req, res) => {
 function humanizeAiError(err) {
   const msg = String(err?.message || err || '');
   if (/\b503\b|service unavailable|overloaded|high demand/i.test(msg)) {
-    return 'Gemini AI is currently overloaded (Google\'s servers are busy). Please wait a minute and try again. If this keeps happening, try changing GEMINI_MODEL in .env to gemini-1.5-flash or gemini-1.5-pro.';
+    return 'OpenAI is currently overloaded. Please wait a minute and try again. If this keeps happening, try setting OPENAI_TEXT_MODEL to gpt-5-mini or gpt-4.1-nano in your env.';
   }
   if (/\b429\b|rate limit/i.test(msg)) {
-    return 'Hit the Gemini rate limit. Wait 30 seconds and try again.';
+    return 'Hit the OpenAI rate limit. Wait 30 seconds and try again. If this keeps happening, your account tier may need to be raised.';
   }
-  if (/\b401\b|api key|unauthorized/i.test(msg)) {
-    return 'Gemini rejected the API key. Check GEMINI_API_KEY in .env.';
+  if (/\b401\b|api key|unauthorized|invalid_api_key/i.test(msg)) {
+    return 'OpenAI rejected the API key. Check OPENAI_API_KEY in your env vars.';
   }
-  if (/\b400\b|invalid argument/i.test(msg)) {
-    return 'Gemini rejected the prompt. Try a shorter source PDF or simpler description.';
+  if (/\b400\b|invalid argument|invalid_request/i.test(msg)) {
+    return 'OpenAI rejected the prompt. Try a shorter source PDF or simpler description.';
   }
   if (/timeout|timed.out|deadline/i.test(msg)) {
-    return 'Gemini took too long to respond. Try a smaller course (fewer modules/lessons) or a shorter PDF.';
+    return 'OpenAI took too long to respond. Try a smaller course (fewer modules/lessons) or a shorter PDF.';
+  }
+  if (/model.*not.*found|model_not_found/i.test(msg)) {
+    return `Model "${OPENAI_TEXT_MODEL}" not available on your account. Try gpt-5.4-mini, gpt-5-mini, or gpt-4.1-mini.`;
   }
   return err?.message || 'Generation failed';
 }
@@ -379,8 +381,8 @@ app.post('/api/regenerate/:draftId', async (req, res) => {
 
     const i = draft.input;
     const structure = await generateCourseStructure({
-      apiKey: GEMINI_API_KEY,
-      model: GEMINI_MODEL,
+      apiKey: OPENAI_API_KEY,
+      model: OPENAI_TEXT_MODEL,
       mode: i.mode,
       sourceText: i.sourceText,
       courseTitle: i.courseTitle,
@@ -395,8 +397,8 @@ app.post('/api/regenerate/:draftId', async (req, res) => {
     let workbookStats = { total: 0, failed: 0 };
     if (i.generateWorkbooks) {
       const r = await generateWorkbooksForCourse({
-        apiKey: GEMINI_API_KEY,
-        model: GEMINI_MODEL,
+        apiKey: OPENAI_API_KEY,
+        model: OPENAI_TEXT_MODEL,
         structure,
       });
       workbookStats = { total: r.total, failed: r.failed };
@@ -823,7 +825,7 @@ app.listen(PORT, () => {
     console.log(` Auth:              ⚠️  PIT only (legacy single-account mode)`);
     console.log(`                    For multi-tenant use, set GHL_CLIENT_ID / SECRET / REDIRECT_URI and visit /setup`);
   }
-  console.log(` Text AI:           Gemini (${GEMINI_MODEL})`);
+  console.log(` Text AI:           OpenAI (${OPENAI_TEXT_MODEL})`);
   if (OPENAI_API_KEY) {
     console.log(` Image AI:          OpenAI (${OPENAI_IMAGE_MODEL}, quality=${OPENAI_IMAGE_QUALITY})`);
   } else {

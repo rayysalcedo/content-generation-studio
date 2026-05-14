@@ -23,7 +23,7 @@ import {
   buildAuthorizeUrl, exchangeCodeForToken, getValidTokenForLocation,
   newState, consumeState,
 } from './lib/oauth.js';
-import { store as tokenStore } from './lib/token-store.js';
+import { store as tokenStore, backendName as tokenStoreBackend } from './lib/token-store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -788,7 +788,7 @@ app.get('/oauth/callback', async (req, res) => {
       return res.redirect(`/setup?error=${encodeURIComponent('Token exchange succeeded but no locationId returned. Make sure your app Target User is Sub-Account.')}`);
     }
 
-    tokenStore.saveInstallation({
+    await tokenStore.saveInstallation({
       locationId,
       companyId: tokenData.companyId || null,
       accessToken: tokenData.access_token,
@@ -808,22 +808,31 @@ app.get('/oauth/callback', async (req, res) => {
   }
 });
 
-app.get('/api/installations', (_req, res) => {
-  const installations = tokenStore.listInstallations().map(i => ({
-    locationId: i.locationId,
-    locationName: i.locationName,
-    companyId: i.companyId,
-    companyName: i.companyName,
-    installedAt: i.installedAt,
-    expiresAt: i.expiresAt,
-    scopes: i.scopes,
-  }));
-  res.json({ installations, oauthConfigured });
+app.get('/api/installations', async (_req, res) => {
+  try {
+    const list = await tokenStore.listInstallations();
+    const installations = list.map(i => ({
+      locationId: i.locationId,
+      locationName: i.locationName,
+      companyId: i.companyId,
+      companyName: i.companyName,
+      installedAt: i.installedAt,
+      expiresAt: i.expiresAt,
+      scopes: i.scopes,
+    }));
+    res.json({ installations, oauthConfigured });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-app.delete('/api/installations/:locationId', (req, res) => {
-  tokenStore.deleteInstallation(req.params.locationId);
-  res.json({ ok: true });
+app.delete('/api/installations/:locationId', async (req, res) => {
+  try {
+    await tokenStore.deleteInstallation(req.params.locationId);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ---------------------------------------------------------------------
@@ -844,7 +853,7 @@ app.get('/', (_req, res) => {
 // ---------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(' CC360 Course Studio is running (multi-tenant)');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -856,10 +865,11 @@ app.listen(PORT, () => {
   }
   console.log(` Regen limit:       ${REGEN_LIMIT} per sub-account`);
   if (oauthConfigured) {
-    const installs = tokenStore.listInstallations();
+    const installs = await tokenStore.listInstallations();
     console.log(` Auth:              ✅ OAuth (Sub-Account Marketplace App)`);
     console.log(`                    Client ID: ${GHL_CLIENT_ID.slice(0, 20)}...`);
     console.log(`                    Redirect:  ${GHL_OAUTH_REDIRECT_URI}`);
+    console.log(`                    Storage:   ${tokenStoreBackend()}${tokenStoreBackend() === 'postgres' ? ' ✅ persistent' : ' ⚠️  volatile (wiped on redeploy)'}`);
     console.log(`                    Installs:  ${installs.length} sub-account${installs.length === 1 ? '' : 's'}`);
     if (CC360_JWT) console.log(`                    (CC360_JWT PIT also set as fallback)`);
   } else if (CC360_JWT) {

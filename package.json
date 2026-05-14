@@ -1,7 +1,7 @@
 {
   "name": "cc360-pdf-to-course",
-  "version": "3.2.0",
-  "description": "CC360 Course Studio — OAuth-enabled agency tool. All-OpenAI: generates courses, workbooks, and AI thumbnails into any authorized sub-account.",
+  "version": "3.3.0",
+  "description": "CC360 Course Studio — OAuth-enabled agency tool. All-OpenAI: generates courses, workbooks, and AI thumbnails into any authorized sub-account. Token store is Postgres-backed (set DATABASE_URL) so installs survive redeploys.",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -17,6 +17,7 @@
     "multer": "^1.4.5-lts.1",
     "openai": "^4.65.0",
     "pdf-parse": "^1.1.1",
-    "pdfkit": "^0.15.2"
+    "pdfkit": "^0.15.2",
+    "pg": "^8.13.0"
   }
 }

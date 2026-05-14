@@ -647,10 +647,12 @@ app.post('/api/push/:draftId', async (req, res) => {
           onProgress: (p) => {
             if (p.phase === 'polling') {
               console.log(`   ⏳ waiting for lessons... (${p.totalPosts}/${p.expected})`);
+            } else if (p.phase === 'polling-retry') {
+              console.log(`   ⏳ poll attempt failed (will retry): ${p.error}`);
             } else if (p.phase === 'course-attached') {
               console.log(`   ✓ Course thumbnail attached`);
             } else if (p.phase === 'course-failed') {
-              console.warn(`   ✗ Course thumbnail attach failed`);
+              console.warn(`   ✗ Course thumbnail attach failed: ${JSON.stringify(p.error)}`);
             } else if (p.phase === 'lessons-done') {
               console.log(`   ✓ Lesson thumbnails: ${p.ok}/${p.total} attached`);
             }

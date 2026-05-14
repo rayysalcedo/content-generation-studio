@@ -1,7 +1,7 @@
 {
   "name": "cc360-pdf-to-course",
-  "version": "2.1.0",
-  "description": "CC360 Course Studio — generate, preview, edit, and publish courses with auto-attached PDF workbooks",
+  "version": "3.0.0",
+  "description": "CC360 Course Studio — OAuth-enabled agency tool. Generates courses, workbooks, and AI thumbnails into any authorized sub-account.",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -16,6 +16,7 @@
     "express": "^4.21.0",
     "form-data": "^4.0.5",
     "multer": "^1.4.5-lts.1",
+    "openai": "^4.65.0",
     "pdf-parse": "^1.1.1",
     "pdfkit": "^0.15.2"
   }

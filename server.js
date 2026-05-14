@@ -770,9 +770,12 @@ app.get('/oauth/callback', async (req, res) => {
     if (!code) {
       return res.redirect(`/setup?error=${encodeURIComponent('Missing authorization code')}`);
     }
-    const stateData = consumeState(state);
-    if (!stateData) {
-      return res.redirect(`/setup?error=${encodeURIComponent('Invalid or expired state. Please try installing again.')}`);
+    // State is OPTIONAL — present when install came from our /setup page (CSRF protection),
+    // absent when install came from external entry points (GHL dev console install link,
+    // in-platform App Marketplace, etc). We accept both.
+    const stateData = state ? consumeState(state) : null;
+    if (state && !stateData) {
+      console.warn(`⚠️  OAuth callback received unknown/expired state="${state}" — proceeding anyway (probably an external install entry point).`);
     }
 
     const tokenData = await exchangeCodeForToken({
@@ -801,7 +804,7 @@ app.get('/oauth/callback', async (req, res) => {
     });
 
     console.log(`✅ OAuth install: sub-account ${locationId} (${tokenData.locationName || 'unknown name'})`);
-    res.redirect(`${stateData.returnTo || '/setup'}?installed=1`);
+    res.redirect(`${stateData?.returnTo || '/setup'}?installed=1`);
   } catch (err) {
     console.error('OAuth callback error:', err);
     res.redirect(`/setup?error=${encodeURIComponent(err.message)}`);

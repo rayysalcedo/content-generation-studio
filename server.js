@@ -786,9 +786,32 @@ app.get('/oauth/callback', async (req, res) => {
       redirectUri: GHL_OAUTH_REDIRECT_URI,
     });
 
-    const locationId = tokenData.locationId;
+    // Log the full response shape (with token strings redacted) so we can see exactly
+    // what GHL is sending — GHL has changed response shapes between API versions and
+    // we need to map fields correctly.
+    const redacted = Object.fromEntries(
+      Object.entries(tokenData || {}).map(([k, v]) => [
+        k,
+        /token/i.test(k) && typeof v === 'string'
+          ? `${v.slice(0, 12)}...(${v.length} chars)`
+          : v
+      ])
+    );
+    console.log(`🔍 OAuth token response:`, JSON.stringify(redacted));
+
+    // Try multiple field-name variations — GHL v2 may use different casing or nesting
+    const locationId =
+      tokenData.locationId ||
+      tokenData.location_id ||
+      tokenData.locationID ||
+      tokenData.location?.id ||
+      null;
+
     if (!locationId) {
-      return res.redirect(`/setup?error=${encodeURIComponent('Token exchange succeeded but no locationId returned. Make sure your app Target User is Sub-Account.')}`);
+      const fieldList = Object.keys(tokenData || {}).join(', ') || '(none)';
+      return res.redirect(`/setup?error=${encodeURIComponent(
+        `Token exchange succeeded but no locationId field. Response had: ${fieldList}. Check Render logs for full response.`
+      )}`);
     }
 
     await tokenStore.saveInstallation({

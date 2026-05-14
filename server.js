@@ -21,7 +21,7 @@ import { uploadToMediaLibrary } from './lib/upload-media.js';
 import { importCourse, attachThumbnails } from './lib/cc360.js';
 import {
   buildAuthorizeUrl, exchangeCodeForToken, getValidTokenForLocation,
-  newState, consumeState,
+  newState, consumeState, mintLocationToken, refreshAccessToken,
 } from './lib/oauth.js';
 import { store as tokenStore, backendName as tokenStoreBackend } from './lib/token-store.js';
 
@@ -76,24 +76,108 @@ function pickLocationId(reqValue) {
 // Returns a Bearer token string.
 async function resolveTokenForLocation(locationId) {
   if (oauthConfigured) {
-    try {
-      const token = await getValidTokenForLocation({
-        store: tokenStore,
-        clientId: GHL_CLIENT_ID,
-        clientSecret: GHL_CLIENT_SECRET,
-        locationId,
-      });
-      return { token, source: 'oauth' };
-    } catch (e) {
-      if (CC360_JWT) {
-        console.warn(`⚠️  OAuth resolve failed for ${locationId}: ${e.message}. Falling back to PIT.`);
-        return { token: CC360_JWT, source: 'pit-fallback' };
+    // ---- Path 1: direct location install (sub-account-target OAuth or previously-minted) ----
+    const direct = await tokenStore.getInstallation(locationId);
+    if (direct) {
+      const now = Date.now();
+      // Token still valid
+      if (direct.expiresAt && direct.expiresAt > now + 60_000) {
+        return { token: direct.accessToken, source: direct.kind === 'location-minted' ? 'oauth-minted-cached' : 'oauth-location' };
       }
-      throw e;
+      // Expired — minted tokens get re-minted from the source company install
+      if (direct.kind === 'location-minted' && direct.companyId) {
+        const company = await tokenStore.getInstallation(`company:${direct.companyId}`);
+        if (company) {
+          try {
+            const fresh = await mintAndSaveLocationToken(company, locationId);
+            return { token: fresh, source: 'oauth-minted-refresh' };
+          } catch (e) {
+            console.warn(`⚠️  Re-mint failed for ${locationId} from company ${direct.companyId}: ${e.message}`);
+          }
+        }
+      } else if (direct.refreshToken) {
+        // Direct location install with refresh token — use existing refresh flow
+        try {
+          const token = await getValidTokenForLocation({
+            store: tokenStore, clientId: GHL_CLIENT_ID, clientSecret: GHL_CLIENT_SECRET, locationId,
+          });
+          return { token, source: 'oauth-refresh' };
+        } catch (e) {
+          console.warn(`⚠️  Refresh failed for ${locationId}: ${e.message}`);
+        }
+      }
     }
+
+    // ---- Path 2: no direct install — try minting from any company install we have ----
+    const all = await tokenStore.listInstallations();
+    const companies = all.filter(i => i.kind === 'company' && i.companyId);
+    for (const company of companies) {
+      try {
+        const fresh = await mintAndSaveLocationToken(company, locationId);
+        return { token: fresh, source: 'oauth-minted-fresh' };
+      } catch (e) {
+        console.warn(`⚠️  Mint from company ${company.companyId} for ${locationId} failed: ${e.message}`);
+      }
+    }
+
+    // ---- Path 3: PIT fallback ----
+    if (CC360_JWT) {
+      console.warn(`⚠️  OAuth resolve failed for ${locationId} — falling back to PIT.`);
+      return { token: CC360_JWT, source: 'pit-fallback' };
+    }
+    throw new Error(`Cannot authenticate to sub-account ${locationId}: no install (location or company) covers it, and no PIT fallback set.`);
   }
   if (CC360_JWT) return { token: CC360_JWT, source: 'pit' };
-  throw new Error('No auth source available. Install the app for this sub-account at /setup, or set CC360_JWT.');
+  throw new Error('No auth source available. Install the app at /setup, or set CC360_JWT.');
+}
+
+// Helper: mint a location token from a company install, refresh the company token first if it's about to expire, and cache the minted token so we don't re-mint on every request.
+async function mintAndSaveLocationToken(companyInstall, locationId) {
+  let companyAccessToken = companyInstall.accessToken;
+  const now = Date.now();
+
+  // Refresh the company token if it's about to expire (or already has)
+  if (companyInstall.expiresAt && companyInstall.expiresAt < now + 60_000 && companyInstall.refreshToken) {
+    console.log(`🔄 Refreshing company token for ${companyInstall.companyId}...`);
+    const r = await refreshAccessToken({
+      refreshToken: companyInstall.refreshToken,
+      clientId: GHL_CLIENT_ID,
+      clientSecret: GHL_CLIENT_SECRET,
+      userType: 'Company',
+    });
+    companyAccessToken = r.access_token;
+    await tokenStore.saveInstallation({
+      locationId: `company:${companyInstall.companyId}`,
+      companyId: companyInstall.companyId,
+      accessToken: r.access_token,
+      refreshToken: r.refresh_token || companyInstall.refreshToken,
+      expiresAt: Date.now() + ((r.expires_in || 86400) * 1000),
+      scopes: r.scope || companyInstall.scopes,
+      kind: 'company',
+    });
+  }
+
+  // Mint the location-scoped token
+  const mint = await mintLocationToken({
+    companyAccessToken,
+    companyId: companyInstall.companyId,
+    locationId,
+  });
+
+  // Cache it as a 'location-minted' install so future requests skip the mint round-trip
+  await tokenStore.saveInstallation({
+    locationId,
+    companyId: companyInstall.companyId,
+    accessToken: mint.access_token,
+    refreshToken: null,                               // minted tokens can't refresh themselves; we re-mint when expired
+    expiresAt: Date.now() + ((mint.expires_in || 86400) * 1000),
+    scopes: mint.scope || companyInstall.scopes,
+    installedAt: Date.now(),
+    kind: 'location-minted',
+  });
+
+  console.log(`🎫 Minted location token for ${locationId} from company ${companyInstall.companyId}`);
+  return mint.access_token;
 }
 
 // ---------------------------------------------------------------------
@@ -806,28 +890,49 @@ app.get('/oauth/callback', async (req, res) => {
       tokenData.locationID ||
       tokenData.location?.id ||
       null;
+    const companyId = tokenData.companyId || tokenData.company_id || null;
+    const userType = tokenData.userType || tokenData.user_type || 'Location';
 
-    if (!locationId) {
-      const fieldList = Object.keys(tokenData || {}).join(', ') || '(none)';
-      return res.redirect(`/setup?error=${encodeURIComponent(
-        `Token exchange succeeded but no locationId field. Response had: ${fieldList}. Check Render logs for full response.`
-      )}`);
+    // Path A: Sub-Account-level install (we have a locationId directly)
+    if (locationId) {
+      await tokenStore.saveInstallation({
+        locationId,
+        companyId,
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+        expiresAt: Date.now() + ((tokenData.expires_in || 86400) * 1000),
+        scopes: tokenData.scope || GHL_OAUTH_SCOPES,
+        installedAt: Date.now(),
+        locationName: tokenData.locationName || null,
+        companyName: tokenData.companyName || null,
+        kind: 'location',
+      });
+      console.log(`✅ OAuth install (location): sub-account ${locationId}`);
+      return res.redirect(`${stateData?.returnTo || '/setup'}?installed=1`);
     }
 
-    await tokenStore.saveInstallation({
-      locationId,
-      companyId: tokenData.companyId || null,
-      accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token,
-      expiresAt: Date.now() + ((tokenData.expires_in || 86400) * 1000),
-      scopes: tokenData.scope || GHL_OAUTH_SCOPES,
-      installedAt: Date.now(),
-      locationName: tokenData.locationName || null,
-      companyName: tokenData.companyName || null,
-    });
+    // Path B: Agency-level install (Company token, no locationId yet — we mint per location on demand)
+    if (userType === 'Company' && companyId) {
+      await tokenStore.saveInstallation({
+        locationId: `company:${companyId}`,                  // synthetic key, never a real locationId
+        companyId,
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+        expiresAt: Date.now() + ((tokenData.expires_in || 86400) * 1000),
+        scopes: tokenData.scope || GHL_OAUTH_SCOPES,
+        installedAt: Date.now(),
+        companyName: tokenData.companyName || null,
+        kind: 'company',
+      });
+      console.log(`✅ OAuth install (company): ${companyId} — location tokens will be minted on demand`);
+      return res.redirect(`${stateData?.returnTo || '/setup'}?installed=1`);
+    }
 
-    console.log(`✅ OAuth install: sub-account ${locationId} (${tokenData.locationName || 'unknown name'})`);
-    res.redirect(`${stateData?.returnTo || '/setup'}?installed=1`);
+    // Neither path matched — surface what we got
+    const fieldList = Object.keys(tokenData || {}).join(', ') || '(none)';
+    return res.redirect(`/setup?error=${encodeURIComponent(
+      `Token exchange succeeded but no usable identity. userType=${userType}, fields: ${fieldList}.`
+    )}`);
   } catch (err) {
     console.error('OAuth callback error:', err);
     res.redirect(`/setup?error=${encodeURIComponent(err.message)}`);
@@ -837,7 +942,9 @@ app.get('/oauth/callback', async (req, res) => {
 app.get('/api/installations', async (_req, res) => {
   try {
     const list = await tokenStore.listInstallations();
-    const installations = list.map(i => ({
+    const subAccountInstalls = list.filter(i => i.kind !== 'company');
+    const companyInstalls    = list.filter(i => i.kind === 'company');
+    const installations = subAccountInstalls.map(i => ({
       locationId: i.locationId,
       locationName: i.locationName,
       companyId: i.companyId,
@@ -845,8 +952,15 @@ app.get('/api/installations', async (_req, res) => {
       installedAt: i.installedAt,
       expiresAt: i.expiresAt,
       scopes: i.scopes,
+      kind: i.kind || 'location',
     }));
-    res.json({ installations, oauthConfigured });
+    const agencies = companyInstalls.map(c => ({
+      companyId: c.companyId,
+      companyName: c.companyName,
+      installedAt: c.installedAt,
+      scopes: c.scopes,
+    }));
+    res.json({ installations, agencies, oauthConfigured });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -892,11 +1006,13 @@ app.listen(PORT, async () => {
   console.log(` Regen limit:       ${REGEN_LIMIT} per sub-account`);
   if (oauthConfigured) {
     const installs = await tokenStore.listInstallations();
+    const subAccts = installs.filter(i => i.kind !== 'company');
+    const companies = installs.filter(i => i.kind === 'company');
     console.log(` Auth:              ✅ OAuth (Sub-Account Marketplace App)`);
     console.log(`                    Client ID: ${GHL_CLIENT_ID.slice(0, 20)}...`);
     console.log(`                    Redirect:  ${GHL_OAUTH_REDIRECT_URI}`);
     console.log(`                    Storage:   ${tokenStoreBackend()}${tokenStoreBackend() === 'postgres' ? ' ✅ persistent' : ' ⚠️  volatile (wiped on redeploy)'}`);
-    console.log(`                    Installs:  ${installs.length} sub-account${installs.length === 1 ? '' : 's'}`);
+    console.log(`                    Installs:  ${subAccts.length} sub-account${subAccts.length === 1 ? '' : 's'}, ${companies.length} agency-level`);
     if (CC360_JWT) console.log(`                    (CC360_JWT PIT also set as fallback)`);
   } else if (CC360_JWT) {
     console.log(` Auth:              ⚠️  PIT only (legacy single-account mode)`);

@@ -727,35 +727,44 @@ app.post('/api/push/:draftId', async (req, res) => {
     let thumbnailAttachResults = null;
     const hasThumbnailsToAttach = courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0;
     if (hasThumbnailsToAttach) {
-      const usingUserJwt = !!CC360_USER_JWT;
-      console.log(`🖼️  Attaching thumbnails to sidebar fields (auth: ${usingUserJwt ? 'user JWT override' : 'OAuth-minted location token'})...`);
-      try {
-        thumbnailAttachResults = await attachThumbnails({
-          token: authToken,
-          backendToken: CC360_USER_JWT,
-          locationId: draftLocationId,
-          productId: result.id,
-          courseTitle: draft.structure.courseTitle,
-          courseDescription: draft.structure.courseDescription || `Course built on ${new Date().toLocaleDateString()}`,
-          courseThumbnailUrl,
-          lessonThumbnailMap: thumbnailUrlByLessonKey,
-          onProgress: (p) => {
-            if (p.phase === 'polling') {
-              console.log(`   ⏳ waiting for lessons... (${p.totalPosts}/${p.expected})`);
-            } else if (p.phase === 'polling-retry') {
-              console.log(`   ⏳ poll attempt failed (will retry): ${p.error}`);
-            } else if (p.phase === 'course-attached') {
-              console.log(`   ✓ Course thumbnail attached (fallback)`);
-            } else if (p.phase === 'course-failed') {
-              console.warn(`   ✗ Course thumbnail attach failed: ${JSON.stringify(p.error)}`);
-            } else if (p.phase === 'lessons-done') {
-              console.log(`   ✓ Lesson thumbnails: ${p.ok}/${p.total} attached (fallback)`);
-            }
-          },
-        });
-      } catch (e) {
-        console.warn(`⚠️  Fallback attach failed: ${e.message}`);
-        thumbnailAttachResults = { error: e.message };
+      const userJwt = await getActiveUserJwt();
+      if (!userJwt) {
+        const msg = 'Thumbnail attach skipped: no User JWT available. Paste one at /setup → "User JWT for thumbnail attach".';
+        console.warn(`⚠️  ${msg}`);
+        thumbnailAttachResults = { skipped: true, reason: msg };
+      } else {
+        console.log(`🖼️  Attaching thumbnails to sidebar fields (auth: pasted user JWT)...`);
+        try {
+          thumbnailAttachResults = await attachThumbnails({
+            token: authToken,
+            backendToken: userJwt,
+            locationId: draftLocationId,
+            productId: result.id,
+            courseTitle: draft.structure.courseTitle,
+            courseDescription: draft.structure.courseDescription || `Course built on ${new Date().toLocaleDateString()}`,
+            courseThumbnailUrl,
+            lessonThumbnailMap: thumbnailUrlByLessonKey,
+            onProgress: (p) => {
+              if (p.phase === 'polling') {
+                console.log(`   ⏳ waiting for lessons... (${p.totalPosts}/${p.expected})`);
+              } else if (p.phase === 'polling-retry') {
+                console.log(`   ⏳ poll attempt failed (will retry): ${p.error}`);
+                if (/401|unauthorized/i.test(p.error || '')) {
+                  console.log(`   💡 401 = User JWT expired or invalid. Paste a fresh one at /setup.`);
+                }
+              } else if (p.phase === 'course-attached') {
+                console.log(`   ✓ Course thumbnail attached`);
+              } else if (p.phase === 'course-failed') {
+                console.warn(`   ✗ Course thumbnail attach failed: ${JSON.stringify(p.error)}`);
+              } else if (p.phase === 'lessons-done') {
+                console.log(`   ✓ Lesson thumbnails: ${p.ok}/${p.total} attached`);
+              }
+            },
+          });
+        } catch (e) {
+          console.warn(`⚠️  Thumbnail attach failed: ${e.message}`);
+          thumbnailAttachResults = { error: e.message };
+        }
       }
     }
 
@@ -943,7 +952,7 @@ app.get('/oauth/callback', async (req, res) => {
 app.get('/api/installations', async (_req, res) => {
   try {
     const list = await tokenStore.listInstallations();
-    const subAccountInstalls = list.filter(i => i.kind !== 'company');
+    const subAccountInstalls = list.filter(i => i.kind !== 'company' && i.kind !== 'user-jwt' && i.locationId !== USER_JWT_KEY);
     const companyInstalls    = list.filter(i => i.kind === 'company');
     const installations = subAccountInstalls.map(i => ({
       locationId: i.locationId,
@@ -977,6 +986,116 @@ app.delete('/api/installations/:locationId', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------
+// User JWT — pasted from CC360 browser session, used for backend.* calls
+// (the only auth class that endpoint accepts, per GHL's design)
+// ---------------------------------------------------------------------
+const USER_JWT_KEY = '__user_jwt__';
+
+function decodeJwtPayload(jwt) {
+  try {
+    const parts = String(jwt).split('.');
+    if (parts.length < 2) return null;
+    return JSON.parse(Buffer.from(parts[1], 'base64').toString());
+  } catch { return null; }
+}
+
+// CORS for the user-jwt endpoints — the bookmarklet runs on app.coursecreator360.com
+// and needs to POST cross-origin to our /api/user-jwt
+function setJwtCors(res) {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+}
+
+app.options('/api/user-jwt', (_req, res) => { setJwtCors(res); res.sendStatus(204); });
+
+app.get('/api/user-jwt', async (_req, res) => {
+  setJwtCors(res);
+  try {
+    const stored = await tokenStore.getInstallation(USER_JWT_KEY);
+    const envJwt = CC360_USER_JWT;
+    const active = stored?.accessToken || envJwt || null;
+    if (!active) {
+      return res.json({ set: false, source: null });
+    }
+    const payload = decodeJwtPayload(active);
+    const expiresAt = payload?.exp ? payload.exp * 1000 : (stored?.expiresAt || null);
+    const now = Date.now();
+    res.json({
+      set: true,
+      source: stored?.accessToken ? 'pasted' : 'env',
+      authClass: payload?.authClass || null,
+      userId: payload?.authClassId || null,
+      installedAt: stored?.installedAt || null,
+      expiresAt,
+      expired: expiresAt ? expiresAt < now : null,
+      minutesRemaining: expiresAt ? Math.round((expiresAt - now) / 60000) : null,
+      minutesSinceSync: stored?.installedAt ? Math.round((now - stored.installedAt) / 60000) : null,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/user-jwt', async (req, res) => {
+  setJwtCors(res);
+  try {
+    const jwt = String(req.body?.jwt || '').trim().replace(/^Bearer\s+/i, '');
+    if (!jwt) return res.status(400).json({ error: 'JWT is required' });
+
+    const payload = decodeJwtPayload(jwt);
+    if (!payload) return res.status(400).json({ error: 'JWT is not parseable. Make sure you copied the whole token (three dot-separated parts).' });
+    if (payload.authClass !== 'User') {
+      return res.status(400).json({ error: `JWT has authClass="${payload.authClass}", but we need authClass="User". The bookmarklet must be clicked while logged into CC360 in the browser tab.` });
+    }
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      return res.status(400).json({ error: `JWT already expired ${Math.round((Date.now() - payload.exp * 1000) / 60000)} min ago. Grab a fresher one.` });
+    }
+
+    await tokenStore.saveInstallation({
+      locationId: USER_JWT_KEY,
+      accessToken: jwt,
+      expiresAt: payload.exp ? payload.exp * 1000 : null,
+      kind: 'user-jwt',
+      userId: payload.authClassId || null,
+      installedAt: Date.now(),
+    });
+
+    res.json({
+      ok: true,
+      expiresAt: payload.exp * 1000,
+      minutesRemaining: Math.round((payload.exp * 1000 - Date.now()) / 60000),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/user-jwt', async (_req, res) => {
+  setJwtCors(res);
+  try {
+    await tokenStore.deleteInstallation(USER_JWT_KEY);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Helper: get the currently-active user JWT (DB-stored takes precedence over env)
+async function getActiveUserJwt() {
+  try {
+    const stored = await tokenStore.getInstallation(USER_JWT_KEY);
+    if (stored?.accessToken) {
+      const payload = decodeJwtPayload(stored.accessToken);
+      if (payload?.exp && payload.exp * 1000 > Date.now() + 60_000) {
+        return stored.accessToken;
+      }
+    }
+  } catch {}
+  return CC360_USER_JWT || null;
+}
+
+// ---------------------------------------------------------------------
 // Routing for HTML pages
 // ---------------------------------------------------------------------
 app.get('/preview/:draftId', (req, res) => {
@@ -1007,7 +1126,7 @@ app.listen(PORT, async () => {
   console.log(` Regen limit:       ${REGEN_LIMIT} per sub-account`);
   if (oauthConfigured) {
     const installs = await tokenStore.listInstallations();
-    const subAccts = installs.filter(i => i.kind !== 'company');
+    const subAccts = installs.filter(i => i.kind !== 'company' && i.kind !== 'user-jwt');
     const companies = installs.filter(i => i.kind === 'company');
     console.log(` Auth:              ✅ OAuth (Sub-Account Marketplace App)`);
     console.log(`                    Client ID: ${GHL_CLIENT_ID.slice(0, 20)}...`);
@@ -1025,17 +1144,7 @@ app.listen(PORT, async () => {
   } else {
     console.log(` Image AI:          ⚠️  OPENAI_API_KEY not set — thumbnails will be skipped`);
   }
-  if (CC360_USER_JWT) {
-    const expiry = decodeJwtExp(CC360_USER_JWT);
-    if (expiry) {
-      const mins = Math.round((expiry - Date.now()) / 60000);
-      console.log(` Backend JWT:       ✅ set (expires ${mins > 0 ? `in ${mins} min` : `${-mins} min AGO — REFRESH IT`})`);
-    } else {
-      console.log(` Backend JWT:       ✅ set (couldn't parse expiry)`);
-    }
-  } else {
-    console.log(` Backend JWT:       ⚠️  CC360_USER_JWT not set — thumbnail attach will 401 on backend.*`);
-  }
+  console.log(` Backend JWT:       paste at /setup → "User JWT for thumbnail attach" (Postgres-persisted)${CC360_USER_JWT ? ' · CC360_USER_JWT env override is set' : ''}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 });
 

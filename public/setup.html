@@ -101,6 +101,41 @@
       </div>
     </div>
 
+    <div class="card">
+      <h2>Thumbnail attach status <span id="jwt-status-pill"></span></h2>
+      <p id="jwt-headline" style="margin-bottom: 16px;">Loading status...</p>
+
+      <div id="jwt-details" style="background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin: 0 0 16px; font-size: 13px; color: var(--text-dim); line-height: 1.7; display: none;">
+        <div><strong style="color: var(--text);">Auto-sync:</strong> <span id="jwt-source">—</span></div>
+        <div><strong style="color: var(--text);">Last refreshed:</strong> <span id="jwt-synced">—</span></div>
+        <div><strong style="color: var(--text);">JWT expires:</strong> <span id="jwt-expires">—</span></div>
+        <div><strong style="color: var(--text);">User ID:</strong> <code id="jwt-user" style="font-size: 11px;">—</code></div>
+      </div>
+
+      <details style="margin: 0 0 12px;">
+        <summary style="cursor: pointer; font-size: 13px; color: var(--text-dim);">Fallback: capture JWT manually (only needed if auto-sync ever stops working)</summary>
+        <div style="margin-top: 14px; padding: 14px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;">
+          <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 12px;">
+            <strong style="color: var(--text);">Option A — Bookmarklet (one click):</strong> drag this to your bookmarks bar, then click it while on CC360.
+          </div>
+          <a id="jwt-bookmarklet" href="#" style="display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: grab; user-select: none;">🪄 Grab CC360 JWT</a>
+
+          <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);">
+            <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 8px;">
+              <strong style="color: var(--text);">Option B — Paste manually:</strong>
+            </div>
+            <textarea id="jwt-input" placeholder="eyJhbGciOiJSUzI1NiIs..." rows="3" style="width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: ui-monospace, monospace; font-size: 11px; resize: vertical;"></textarea>
+            <button class="install-btn" id="jwt-save-btn" style="padding: 8px 16px; font-size: 13px; margin-top: 8px;">Save pasted JWT</button>
+          </div>
+        </div>
+      </details>
+
+      <div style="display: flex; gap: 10px; align-items: center; padding-top: 12px; border-top: 1px solid var(--border);">
+        <button class="danger-btn" id="jwt-clear-btn" style="margin-left: 0;">Clear stored JWT</button>
+        <span id="jwt-info" style="font-size: 12px; color: var(--text-dim); margin-left: auto;"></span>
+      </div>
+    </div>
+
     <div style="text-align:center;margin-top:20px;">
       <a class="back" href="/">← Back to course builder</a>
     </div>
@@ -181,7 +216,153 @@ async function loadInstallations() {
     host.innerHTML = `<div class="empty">Could not load installations: ${escapeHtml(e.message)}</div>`;
   }
 }
+
+// ---- User JWT ----
+const jwtStatusPill = document.getElementById('jwt-status-pill');
+const jwtInfo = document.getElementById('jwt-info');
+const jwtInput = document.getElementById('jwt-input');
+const jwtSaveBtn = document.getElementById('jwt-save-btn');
+const jwtClearBtn = document.getElementById('jwt-clear-btn');
+const jwtBookmarklet = document.getElementById('jwt-bookmarklet');
+
+// Build the bookmarklet. Scans localStorage + sessionStorage for any JWT-shaped string
+// (including ones embedded in JSON objects). Falls back to intercepting the next fetch.
+(function buildBookmarklet() {
+  const SERVER = window.location.origin;
+  const src = `
+    (async()=>{
+      const S=${JSON.stringify(SERVER)};
+      const d=t=>{try{return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')))}catch{}};
+      const v=t=>{const p=d(t);return p&&p.authClass==='User'&&p.exp*1000>Date.now()?p:null};
+      const post=async j=>{
+        try{
+          const r=await fetch(S+'/api/user-jwt',{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({jwt:j})});
+          const x=await r.json();
+          alert(r.ok?('✅ JWT saved! Valid ~'+x.minutesRemaining+' min.\\nGo back to your tool — thumbnail attach now works.'):('❌ '+(x.error||'Save failed')));
+        }catch(e){alert('❌ Network error: '+e.message)}
+      };
+      const re=/eyJ[A-Za-z0-9_-]{20,}\\.[A-Za-z0-9_-]{20,}\\.[A-Za-z0-9_-]{20,}/g;
+      let best=null,bestExp=0;
+      const scan=store=>{
+        for(const k of Object.keys(store)){
+          const val=store.getItem(k);
+          if(!val)continue;
+          const matches=val.match(re)||[];
+          for(const c of matches){const p=v(c);if(p&&p.exp>bestExp){best=c;bestExp=p.exp}}
+        }
+      };
+      scan(localStorage);scan(sessionStorage);
+      if(best)return post(best);
+      const o=window.fetch;
+      let captured=false;
+      window.fetch=function(...a){
+        if(!captured){
+          const h=a[1]?.headers;
+          let A=null;
+          if(h instanceof Headers)A=h.get('authorization');
+          else if(h&&typeof h==='object')A=h.authorization||h.Authorization;
+          if(A&&/^Bearer eyJ/i.test(A)){captured=true;window.fetch=o;post(A.replace(/^Bearer /i,''))}
+        }
+        return o.apply(this,a);
+      };
+      alert('🔍 No JWT in storage. Click any link or page in CC360 — JWT will be auto-captured from the next network request.');
+    })();
+  `.replace(/\s+/g, ' ').trim();
+  jwtBookmarklet.href = 'javascript:' + encodeURIComponent(src);
+})();
+
+jwtBookmarklet.addEventListener('click', (e) => {
+  e.preventDefault();
+  alert(`📌 To use this bookmarklet:\n\n1. DRAG this button to your bookmarks bar (don't click — drag)\n2. Go to your CC360 tab\n3. Click the "🪄 Grab CC360 JWT" bookmark you just dragged\n\nOR right-click the button → "Bookmark this link"`);
+});
+
+async function loadJwtStatus() {
+  const jwtHeadline = document.getElementById('jwt-headline');
+  const jwtDetails = document.getElementById('jwt-details');
+  const jwtSource = document.getElementById('jwt-source');
+  const jwtSynced = document.getElementById('jwt-synced');
+  const jwtExpires = document.getElementById('jwt-expires');
+  const jwtUser = document.getElementById('jwt-user');
+
+  try {
+    const res = await fetch('/api/user-jwt');
+    const data = await res.json();
+
+    if (!data.set) {
+      jwtStatusPill.innerHTML = '<span class="pill pill-bad">NOT SET</span>';
+      jwtHeadline.innerHTML = `No JWT stored yet. Open <code>app.coursecreator360.com</code> in any agency-view page — the Custom JS will auto-push within a few seconds. Refresh this page after.`;
+      jwtDetails.style.display = 'none';
+      jwtInfo.textContent = 'Thumbnail attach will be skipped on push.';
+      return;
+    }
+
+    jwtDetails.style.display = 'block';
+    jwtSource.textContent = data.source === 'pasted' ? 'CC360 Custom JS auto-sync (or manual paste)' : 'env var CC360_USER_JWT (fallback)';
+    jwtSynced.textContent = data.minutesSinceSync != null
+      ? `${data.minutesSinceSync} min ago${data.installedAt ? ` · ${new Date(data.installedAt).toLocaleTimeString()}` : ''}`
+      : '—';
+    jwtExpires.textContent = data.expiresAt
+      ? `${new Date(data.expiresAt).toLocaleTimeString()} (${data.minutesRemaining >= 0 ? `in ${data.minutesRemaining} min` : `${Math.abs(data.minutesRemaining)} min ago`})`
+      : '—';
+    jwtUser.textContent = data.userId || '—';
+
+    if (data.expired) {
+      jwtStatusPill.innerHTML = '<span class="pill pill-bad">EXPIRED</span>';
+      jwtHeadline.innerHTML = `Last captured JWT has expired. Open or reload your CC360 tab — the Custom JS will push a fresh one within seconds.`;
+      jwtInfo.textContent = `JWT expired — push a course only after the status flips back to ACTIVE.`;
+    } else if (data.minutesRemaining < 10) {
+      jwtStatusPill.innerHTML = '<span class="pill pill-bad">EXPIRING</span>';
+      jwtHeadline.innerHTML = `Stored JWT expires in <strong>${data.minutesRemaining} min</strong>. Reload your CC360 tab to trigger a fresh auto-push.`;
+      jwtInfo.textContent = `Auto-refresh: open CC360, the snippet pushes a new JWT.`;
+    } else {
+      jwtStatusPill.innerHTML = '<span class="pill pill-ok">ACTIVE</span>';
+      jwtHeadline.innerHTML = `✓ Auto-sync is working. Thumbnails will attach on every course push for the next <strong>${data.minutesRemaining} min</strong>.`;
+      jwtInfo.textContent = `Auto-refreshes every CC360 tab session.`;
+    }
+  } catch (e) {
+    jwtStatusPill.innerHTML = '<span class="pill pill-bad">ERROR</span>';
+    jwtHeadline.textContent = e.message;
+    jwtDetails.style.display = 'none';
+  }
+}
+
+jwtSaveBtn.addEventListener('click', async () => {
+  const jwt = jwtInput.value.trim();
+  if (!jwt) { showToast('Paste a JWT first', 'bad'); return; }
+  jwtSaveBtn.disabled = true;
+  try {
+    const res = await fetch('/api/user-jwt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jwt }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`);
+    showToast(`JWT saved · valid for ~${data.minutesRemaining} min`, 'ok');
+    jwtInput.value = '';
+    loadJwtStatus();
+  } catch (e) {
+    showToast(e.message, 'bad');
+  } finally {
+    jwtSaveBtn.disabled = false;
+  }
+});
+
+jwtClearBtn.addEventListener('click', async () => {
+  if (!confirm('Clear the stored User JWT? Thumbnail attach will skip on push until you paste a new one.')) return;
+  try {
+    await fetch('/api/user-jwt', { method: 'DELETE' });
+    showToast('JWT cleared', 'ok');
+    loadJwtStatus();
+  } catch (e) {
+    showToast('Clear failed: ' + e.message, 'bad');
+  }
+});
+
 loadInstallations();
+loadJwtStatus();
+// Refresh JWT status every 30s while the page is open
+setInterval(loadJwtStatus, 30_000);
 </script>
 </body>
 </html>

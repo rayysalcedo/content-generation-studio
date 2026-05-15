@@ -765,7 +765,7 @@ app.post('/api/push/:draftId', async (req, res) => {
         thumbnailAttachResults = { error: 'no User JWT' };
       } else {
         try {
-          console.log(`🖼️  Attaching thumbnails via backend.memberships.apisystem.tech...`);
+          console.log(`🖼️  Attaching thumbnails via backend.leadconnectorhq.com...`);
           thumbnailAttachResults = await attachThumbnails({
             backendToken: userJwtForUploads,
             backendTokenId: userJwtTokenId,

@@ -765,7 +765,7 @@ app.post('/api/push/:draftId', async (req, res) => {
         thumbnailAttachResults = { error: 'no User JWT' };
       } else {
         try {
-          console.log(`🖼️  Attaching thumbnails server-side via services.leadconnectorhq.com (iframe-origin spoof)...`);
+          console.log(`🖼️  Attaching thumbnails server-side via backend.leadconnectorhq.com...`);
           thumbnailAttachResults = await attachThumbnails({
             backendToken: userJwtForUploads,
             backendTokenId: userJwtTokenId,

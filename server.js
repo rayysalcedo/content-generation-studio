@@ -753,56 +753,42 @@ app.post('/api/push/:draftId', async (req, res) => {
       console.log(`   (posterImage fields included in import payload — open the course in CC360 to verify they took effect)`);
     }
 
-    // 3. Attach thumbnails server-side via backend.memberships.apisystem.tech.
-    // Server-to-server call (CORS doesn't apply), uses the User JWT we already
-    // captured for the upload step. The /courses/courses-exporter/public/import
-    // endpoint does NOT honor posterImage, so this post-import attach is required.
-    let thumbnailAttachResults = null;
+    // 3. Queue the thumbnail attach for the browser to perform.
+    // backend.leadconnectorhq.com is IP-filtered — it rejects calls from datacenter
+    // IPs even with a valid User JWT. So the actual posterImage PUTs have to happen
+    // from the user's residential browser (via Custom JS snippet at app.coursecreator360.com).
+    let thumbnailJob = null;
     const hasThumbnailsToAttach = courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0;
     if (hasThumbnailsToAttach) {
-      if (!userJwtForUploads) {
-        console.warn(`⚠️  Have thumbnails ready to attach but no User JWT loaded — skipping. Paste one at /setup.`);
-        thumbnailAttachResults = { error: 'no User JWT' };
-      } else {
-        try {
-          console.log(`🖼️  Attaching thumbnails via backend.leadconnectorhq.com...`);
-          thumbnailAttachResults = await attachThumbnails({
-            backendToken: userJwtForUploads,
-            backendTokenId: userJwtTokenId,
-            locationId: draftLocationId,
-            productId: result.id,
-            courseTitle: draft.structure.courseTitle,
-            courseDescription: draft.structure.courseDescription || `Course built on ${new Date().toLocaleDateString()}`,
-            courseThumbnailUrl,
-            lessonThumbnailMap: thumbnailUrlByLessonKey,
-            onProgress: ({ phase, error }) => {
-              if (phase === 'polling') return;   // suppress noisy poll-wait logs
-              const errStr = error ? ': ' + (typeof error === 'string' ? error : JSON.stringify(error)).slice(0, 250) : '';
-              console.log(`   [attach] ${phase}${errStr}`);
-            },
-          });
-          const courseOk = thumbnailAttachResults.course?.ok;
-          const lessonsOk = (thumbnailAttachResults.lessons || []).filter(l => l.ok).length;
-          const lessonsTotal = (thumbnailAttachResults.lessons || []).length;
-          const courseSymbol = courseOk === undefined ? '—' : (courseOk ? '✓' : '✗');
-          console.log(`   ✓ Thumbnail attach result: course=${courseSymbol}, lessons=${lessonsOk}/${lessonsTotal}`);
-          if (courseOk === false) {
-            const errStr = typeof thumbnailAttachResults.course.error === 'string'
-              ? thumbnailAttachResults.course.error : JSON.stringify(thumbnailAttachResults.course.error);
-            console.warn(`     ↳ course error: ${errStr.slice(0, 400)}`);
-          }
-          for (const lr of thumbnailAttachResults.lessons || []) {
-            if (!lr.ok) {
-              const errStr = typeof lr.error === 'string' ? lr.error : JSON.stringify(lr.error);
-              console.warn(`     ↳ lesson ${lr.key} error: ${errStr.slice(0, 400)}`);
-            }
-          }
-        } catch (e) {
-          console.warn(`⚠️  Thumbnail attach failed: ${e.message}`);
-          thumbnailAttachResults = { error: e.message };
-        }
-      }
+      thumbnailJob = {
+        jobId: `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: Date.now(),
+        status: 'pending',
+        locationId: draftLocationId,
+        productId: result.id,
+        courseTitle: draft.structure.courseTitle,
+        courseDescription: draft.structure.courseDescription || `Course built on ${new Date().toLocaleDateString()}`,
+        courseUrl: result.url,
+        courseThumbnailUrl: courseThumbnailUrl || null,
+        lessonThumbnailMap: thumbnailUrlByLessonKey || {},
+        expectedLessonCount: Object.keys(thumbnailUrlByLessonKey || {}).length,
+        result: null,
+      };
+      await tokenStore.saveInstallation({
+        locationId: `__job__${thumbnailJob.jobId}`,
+        accessToken: 'thumbnail-job',
+        kind: 'thumbnail-job',
+        installedAt: Date.now(),
+        payload: thumbnailJob,
+      });
+      console.log(`🖼️  Thumbnail attach queued as job ${thumbnailJob.jobId}`);
+      console.log(`   → CC360 Custom JS will auto-process within ~30s (just have CC360 open in a tab)`);
+      console.log(`   → Status at /jobs · ${1 + thumbnailJob.expectedLessonCount} thumbnails to attach`);
     }
+
+    let thumbnailAttachResults = thumbnailJob
+      ? { queued: true, jobId: thumbnailJob.jobId, statusUrl: `/jobs`, total: 1 + thumbnailJob.expectedLessonCount }
+      : null;
 
     draft.pushedAt = Date.now();
     draft.cc360 = result;

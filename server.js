@@ -626,6 +626,25 @@ app.post('/api/push/:draftId', async (req, res) => {
       return res.status(401).json({ error: `Cannot authenticate to sub-account ${draftLocationId}: ${e.message}` });
     }
 
+    // For thumbnail uploads we need a User-authClass JWT (the kind the CC360 web app uses).
+    // The /membership/locations/{lid}/media/signed-url endpoint 401s on OAuth Location/Company
+    // tokens — it only accepts User JWTs. Tony's User JWT is auto-synced by the agency-settings
+    // snippet whenever he has CC360 open in a tab.
+    let userJwtForUploads = null;
+    let userJwtTokenId = null;
+    try {
+      const u = await getActiveUserJwt();
+      if (u?.jwt) {
+        userJwtForUploads = u.jwt;
+        userJwtTokenId = u.tokenId || null;
+        console.log(`🔐 User JWT loaded for thumbnail uploads${userJwtTokenId ? ' (with token-id)' : ''}`);
+      } else {
+        console.warn(`⚠️  No User JWT available — thumbnail uploads will be skipped. Paste a JWT at /setup or open CC360 in a tab so the snippet syncs one.`);
+      }
+    } catch (e) {
+      console.warn(`⚠️  Could not load User JWT: ${e.message}`);
+    }
+
     const workbookUrlByLessonKey = {};
     const thumbnailUrlByLessonKey = {};
     let courseThumbnailUrl = null;
@@ -634,9 +653,13 @@ app.post('/api/push/:draftId', async (req, res) => {
     // 0. Upload thumbnails first — MUST go to the courses CDN (cdn.courses.apisystem.tech),
     // NOT the general media library. GHL's courses-exporter import endpoint silently
     // drops posterImage URLs from anywhere else, which is why thumbnails weren't sticking.
+    // The signed-url endpoint requires a User-authClass JWT (OAuth tokens get 401).
     const thumbnails = draft.thumbnails || {};
     const thumbnailKeys = Object.keys(thumbnails);
-    if (thumbnailKeys.length > 0) {
+    if (thumbnailKeys.length > 0 && !userJwtForUploads) {
+      console.warn(`⚠️  ${thumbnailKeys.length} thumbnails generated but skipping upload — no User JWT available.`);
+      console.warn(`   Open CC360 in a tab (snippet auto-syncs JWT) or paste one at /setup, then re-push.`);
+    } else if (thumbnailKeys.length > 0) {
       console.log(`🖼️  Uploading ${thumbnailKeys.length} thumbnails to courses CDN...`);
       for (const key of thumbnailKeys) {
         const b64 = thumbnails[key];
@@ -650,7 +673,8 @@ app.post('/api/push/:draftId', async (req, res) => {
           // If lesson posterImages still don't stick after testing, try 'post' for lessons.
           const folder = 'product';
           const { publicUrl } = await uploadCourseMedia({
-            token: authToken,
+            token: userJwtForUploads,             // User JWT (NOT the OAuth token)
+            tokenId: userJwtTokenId,              // Firebase ID token, if synced
             locationId: draftLocationId,
             buffer: buf,
             filename: baseName,

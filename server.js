@@ -722,53 +722,44 @@ app.post('/api/push/:draftId', async (req, res) => {
       console.log(`   (posterImage fields included in import payload — open the course in CC360 to verify they took effect)`);
     }
 
-    // 3. Optional fallback: attach thumbnails via the internal backend API.
-    // Only runs if CC360_USER_JWT is set (the import-level posterImage approach is preferred).
-    let thumbnailAttachResults = null;
+    // 3. Save a "pending thumbnail attach" job for the browser to finalize.
+    // GHL's backend.* WAF blocks our server's IP, so we can't make these PUTs
+    // from Render. Instead, the user opens /finalize/<jobId> in their CC360
+    // tab, which fetches this job and makes the PUTs from their browser
+    // (same origin, same JWT, same IP as a normal CC360 action).
+    let thumbnailJob = null;
     const hasThumbnailsToAttach = courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0;
     if (hasThumbnailsToAttach) {
-      const userAuth = await getActiveUserJwt();
-      if (!userAuth) {
-        const msg = 'Thumbnail attach skipped: no User JWT available. Paste one at /setup → "User JWT for thumbnail attach".';
-        console.warn(`⚠️  ${msg}`);
-        thumbnailAttachResults = { skipped: true, reason: msg };
-      } else {
-        const authLabel = userAuth.tokenId ? 'user JWT + token-id' : 'user JWT only (no token-id — backend.* will likely 401)';
-        console.log(`🖼️  Attaching thumbnails to sidebar fields (auth: ${authLabel})...`);
-        try {
-          thumbnailAttachResults = await attachThumbnails({
-            token: authToken,
-            backendToken: userAuth.jwt,
-            backendTokenId: userAuth.tokenId,
-            locationId: draftLocationId,
-            productId: result.id,
-            courseTitle: draft.structure.courseTitle,
-            courseDescription: draft.structure.courseDescription || `Course built on ${new Date().toLocaleDateString()}`,
-            courseThumbnailUrl,
-            lessonThumbnailMap: thumbnailUrlByLessonKey,
-            onProgress: (p) => {
-              if (p.phase === 'polling') {
-                console.log(`   ⏳ waiting for lessons... (${p.totalPosts}/${p.expected})`);
-              } else if (p.phase === 'polling-retry') {
-                console.log(`   ⏳ poll attempt failed (will retry): ${p.error}`);
-                if (/401|unauthorized/i.test(p.error || '')) {
-                  console.log(`   💡 401 = User JWT expired or token-id missing. Reload CC360 to refresh both at /setup.`);
-                }
-              } else if (p.phase === 'course-attached') {
-                console.log(`   ✓ Course thumbnail attached`);
-              } else if (p.phase === 'course-failed') {
-                console.warn(`   ✗ Course thumbnail attach failed: ${JSON.stringify(p.error)}`);
-              } else if (p.phase === 'lessons-done') {
-                console.log(`   ✓ Lesson thumbnails: ${p.ok}/${p.total} attached`);
-              }
-            },
-          });
-        } catch (e) {
-          console.warn(`⚠️  Thumbnail attach failed: ${e.message}`);
-          thumbnailAttachResults = { error: e.message };
-        }
-      }
+      thumbnailJob = {
+        jobId: `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: Date.now(),
+        status: 'pending',
+        locationId: draftLocationId,
+        productId: result.id,
+        courseTitle: draft.structure.courseTitle,
+        courseDescription: draft.structure.courseDescription || `Course built on ${new Date().toLocaleDateString()}`,
+        courseUrl: result.url,
+        courseThumbnailUrl: courseThumbnailUrl || null,
+        // Lesson keys are "m{moduleIdx}-l{lessonIdx}"; the browser will resolve them to postIds.
+        lessonThumbnailMap: thumbnailUrlByLessonKey || {},
+        expectedLessonCount: Object.keys(thumbnailUrlByLessonKey || {}).length,
+        result: null, // filled in by /api/finalize/:jobId/complete after browser runs
+      };
+      await tokenStore.saveInstallation({
+        locationId: `__job__${thumbnailJob.jobId}`,
+        accessToken: 'thumbnail-job',
+        kind: 'thumbnail-job',
+        installedAt: Date.now(),
+        payload: thumbnailJob,
+      });
+      console.log(`🖼️  Thumbnail attach queued as job ${thumbnailJob.jobId}`);
+      console.log(`   → Your CC360 Custom JS will auto-process this within ~30s (just have CC360 open in a tab)`);
+      console.log(`   → Status at /jobs · ${1 + thumbnailJob.expectedLessonCount} thumbnails to attach`);
     }
+
+    let thumbnailAttachResults = thumbnailJob
+      ? { queued: true, jobId: thumbnailJob.jobId, statusUrl: `/jobs`, total: 1 + thumbnailJob.expectedLessonCount }
+      : null;
 
     draft.pushedAt = Date.now();
     draft.cc360 = result;
@@ -1102,8 +1093,80 @@ async function getActiveUserJwt() {
 }
 
 // ---------------------------------------------------------------------
+// Thumbnail-attach jobs (browser-driven finalization)
+// The server's IP is blocked from GHL's backend.* WAF, so we let the
+// user's browser drain the queue from their CC360 tab.
+// ---------------------------------------------------------------------
+function setFinalizeCors(res) {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+}
+app.options('/api/finalize/*', (_req, res) => { setFinalizeCors(res); res.sendStatus(204); });
+
+// List pending jobs (used by the dashboard if we ever add one)
+app.get('/api/finalize', async (_req, res) => {
+  setFinalizeCors(res);
+  try {
+    const all = await tokenStore.listInstallations();
+    const jobs = all
+      .filter(i => i.kind === 'thumbnail-job' && i.payload?.status === 'pending')
+      .map(i => i.payload)
+      .sort((a, b) => b.createdAt - a.createdAt);
+    res.json({ jobs });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get a specific job (the finalize page calls this on load)
+app.get('/api/finalize/:jobId', async (req, res) => {
+  setFinalizeCors(res);
+  try {
+    const stored = await tokenStore.getInstallation(`__job__${req.params.jobId}`);
+    if (!stored?.payload) return res.status(404).json({ error: 'Job not found or already cleaned up' });
+    res.json({ job: stored.payload });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Mark a job complete with result data
+app.post('/api/finalize/:jobId/complete', async (req, res) => {
+  setFinalizeCors(res);
+  try {
+    const key = `__job__${req.params.jobId}`;
+    const stored = await tokenStore.getInstallation(key);
+    if (!stored?.payload) return res.status(404).json({ error: 'Job not found' });
+
+    const result = req.body || {};
+    const updatedJob = {
+      ...stored.payload,
+      status: result.allOk ? 'complete' : 'partial',
+      completedAt: Date.now(),
+      result,
+    };
+    await tokenStore.saveInstallation({
+      locationId: key,
+      accessToken: 'thumbnail-job',
+      kind: 'thumbnail-job',
+      installedAt: stored.installedAt,
+      payload: updatedJob,
+    });
+    console.log(`🖼️  Thumbnail job ${req.params.jobId} ${updatedJob.status}: course=${result.course?.ok ? '✓' : '✗'}, lessons=${result.lessonsOk || 0}/${result.lessonsTotal || 0}`);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------------------------------------------------------------------
 // Routing for HTML pages
 // ---------------------------------------------------------------------
+app.get('/jobs', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'jobs.html'));
+});
+
 app.get('/preview/:draftId', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'preview.html'));
 });

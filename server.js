@@ -17,7 +17,7 @@ import { generateWorkbooksForCourse } from './lib/generate-workbook.js';
 import { generateThumbnailsForCourse, base64ToBuffer } from './lib/generate-thumbnails.js';
 import { renderLessonHTML, buildTheme } from './lib/render-html.js';
 import { renderWorkbookPdf } from './lib/pdf-renderer.js';
-import { uploadToMediaLibrary } from './lib/upload-media.js';
+import { uploadToMediaLibrary, uploadCourseMedia } from './lib/upload-media.js';
 import { importCourse, attachThumbnails } from './lib/cc360.js';
 import {
   buildAuthorizeUrl, exchangeCodeForToken, getValidTokenForLocation,
@@ -631,33 +631,39 @@ app.post('/api/push/:draftId', async (req, res) => {
     let courseThumbnailUrl = null;
     const uploadResults = [];   // for response
 
-    // 0. Upload thumbnails first (course hero + each lesson icon) — independent of workbooks
+    // 0. Upload thumbnails first — MUST go to the courses CDN (cdn.courses.apisystem.tech),
+    // NOT the general media library. GHL's courses-exporter import endpoint silently
+    // drops posterImage URLs from anywhere else, which is why thumbnails weren't sticking.
     const thumbnails = draft.thumbnails || {};
     const thumbnailKeys = Object.keys(thumbnails);
     if (thumbnailKeys.length > 0) {
-      console.log(`🖼️  Uploading ${thumbnailKeys.length} thumbnails to media library...`);
+      console.log(`🖼️  Uploading ${thumbnailKeys.length} thumbnails to courses CDN...`);
       for (const key of thumbnailKeys) {
         const b64 = thumbnails[key];
         if (!b64) continue;
         try {
           const buf = base64ToBuffer(b64);
-          const filename = key === 'course'
-            ? `${slug(draft.structure.courseTitle, 40)}-cover.png`
-            : `${slug(draft.structure.courseTitle, 30)}-${key}-thumb.png`;
-          const { url } = await uploadToMediaLibrary({
-            pit: authToken,
+          const baseName = key === 'course'
+            ? `${slug(draft.structure.courseTitle, 40)}-cover`
+            : `${slug(draft.structure.courseTitle, 30)}-${key}-thumb`;
+          // 'product' is the confirmed folder for course-level images.
+          // If lesson posterImages still don't stick after testing, try 'post' for lessons.
+          const folder = 'product';
+          const { publicUrl } = await uploadCourseMedia({
+            token: authToken,
             locationId: draftLocationId,
             buffer: buf,
-            filename,
-            contentType: 'image/png',
+            filename: baseName,
+            folder,
+            mimeType: 'image/png',
           });
           if (key === 'course') {
-            courseThumbnailUrl = url;
+            courseThumbnailUrl = publicUrl;
           } else {
-            thumbnailUrlByLessonKey[key] = url;
+            thumbnailUrlByLessonKey[key] = publicUrl;
           }
-          uploadResults.push({ key: `thumb:${key}`, url, ok: true });
-          console.log(`   ✓ Thumbnail [${key}]`);
+          uploadResults.push({ key: `thumb:${key}`, url: publicUrl, ok: true });
+          console.log(`   ✓ Thumbnail [${key}] → ${publicUrl}`);
         } catch (e) {
           console.warn(`   ✗ Thumbnail [${key}] upload failed: ${e.message}`);
           uploadResults.push({ key: `thumb:${key}`, ok: false, error: e.message });

@@ -726,8 +726,9 @@ app.post('/api/push/:draftId', async (req, res) => {
     // Only runs if CC360_USER_JWT is set (the import-level posterImage approach is preferred).
     let thumbnailAttachResults = null;
     const hasThumbnailsToAttach = courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0;
-    if (hasThumbnailsToAttach && CC360_USER_JWT) {
-      console.log(`🖼️  Running fallback thumbnail attach (CC360_USER_JWT is set)...`);
+    if (hasThumbnailsToAttach) {
+      const usingUserJwt = !!CC360_USER_JWT;
+      console.log(`🖼️  Attaching thumbnails to sidebar fields (auth: ${usingUserJwt ? 'user JWT override' : 'OAuth-minted location token'})...`);
       try {
         thumbnailAttachResults = await attachThumbnails({
           token: authToken,

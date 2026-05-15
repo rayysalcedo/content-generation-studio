@@ -775,8 +775,12 @@ app.post('/api/push/:draftId', async (req, res) => {
             courseDescription: draft.structure.courseDescription || `Course built on ${new Date().toLocaleDateString()}`,
             courseThumbnailUrl,
             lessonThumbnailMap: thumbnailUrlByLessonKey,
-            onProgress: ({ phase, error }) => {
-              if (phase === 'polling') return;
+            onProgress: ({ phase, error, totalPosts, expected, elapsedMs }) => {
+              if (phase === 'polling') {
+                const secs = elapsedMs ? Math.round(elapsedMs / 1000) : 0;
+                console.log(`   [attach] polling: ${totalPosts ?? '?'}/${expected ?? '?'} lessons ready (${secs}s elapsed)`);
+                return;
+              }
               const errStr = error ? ': ' + (typeof error === 'string' ? error : JSON.stringify(error)).slice(0, 250) : '';
               console.log(`   [attach] ${phase}${errStr}`);
             },

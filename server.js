@@ -753,44 +753,59 @@ app.post('/api/push/:draftId', async (req, res) => {
       console.log(`   (posterImage fields included in import payload — open the course in CC360 to verify they took effect)`);
     }
 
-    // 3. Save a "pending thumbnail attach" job for the browser to finalize.
-    // GHL's backend.* WAF blocks our server's IP, so we can't make these PUTs
-    // from Render. Instead, the user opens /finalize/<jobId> in their CC360
-    // tab, which fetches this job and makes the PUTs from their browser
-    // (same origin, same JWT, same IP as a normal CC360 action).
-    let thumbnailJob = null;
+    // 3. Attach thumbnails via the membership backend API (server-side).
+    // The /courses/courses-exporter/public/import endpoint does NOT honor posterImage
+    // fields, so we have to set them post-import via the membership backend. This
+    // needs a User-authClass JWT — same one we used for signed-url uploads. The
+    // browser-fingerprint headers in backendHeaders() let this call succeed from
+    // Render despite GHL's WAF rules.
+    let thumbnailAttachResults = null;
     const hasThumbnailsToAttach = courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0;
     if (hasThumbnailsToAttach) {
-      thumbnailJob = {
-        jobId: `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        createdAt: Date.now(),
-        status: 'pending',
-        locationId: draftLocationId,
-        productId: result.id,
-        courseTitle: draft.structure.courseTitle,
-        courseDescription: draft.structure.courseDescription || `Course built on ${new Date().toLocaleDateString()}`,
-        courseUrl: result.url,
-        courseThumbnailUrl: courseThumbnailUrl || null,
-        // Lesson keys are "m{moduleIdx}-l{lessonIdx}"; the browser will resolve them to postIds.
-        lessonThumbnailMap: thumbnailUrlByLessonKey || {},
-        expectedLessonCount: Object.keys(thumbnailUrlByLessonKey || {}).length,
-        result: null, // filled in by /api/finalize/:jobId/complete after browser runs
-      };
-      await tokenStore.saveInstallation({
-        locationId: `__job__${thumbnailJob.jobId}`,
-        accessToken: 'thumbnail-job',
-        kind: 'thumbnail-job',
-        installedAt: Date.now(),
-        payload: thumbnailJob,
-      });
-      console.log(`🖼️  Thumbnail attach queued as job ${thumbnailJob.jobId}`);
-      console.log(`   → Your CC360 Custom JS will auto-process this within ~30s (just have CC360 open in a tab)`);
-      console.log(`   → Status at /jobs · ${1 + thumbnailJob.expectedLessonCount} thumbnails to attach`);
+      if (!userJwtForUploads) {
+        console.warn(`⚠️  Have thumbnails ready to attach but no User JWT loaded — skipping. Paste one at /setup.`);
+        thumbnailAttachResults = { error: 'no User JWT' };
+      } else {
+        try {
+          console.log(`🖼️  Attaching thumbnails to course (server-side via membership backend)...`);
+          thumbnailAttachResults = await attachThumbnails({
+            backendToken: userJwtForUploads,
+            backendTokenId: userJwtTokenId,
+            locationId: draftLocationId,
+            productId: result.id,
+            courseTitle: draft.structure.courseTitle,
+            courseDescription: draft.structure.courseDescription || `Course built on ${new Date().toLocaleDateString()}`,
+            courseThumbnailUrl,
+            lessonThumbnailMap: thumbnailUrlByLessonKey,
+            onProgress: ({ phase, error }) => {
+              if (phase === 'polling') return;                  // suppress noisy poll-wait logs
+              const errStr = error ? ': ' + (typeof error === 'string' ? error : JSON.stringify(error)).slice(0, 250) : '';
+              console.log(`   [attach] ${phase}${errStr}`);
+            },
+          });
+          const courseOk = thumbnailAttachResults.course?.ok;
+          const lessonsOk = (thumbnailAttachResults.lessons || []).filter(l => l.ok).length;
+          const lessonsTotal = (thumbnailAttachResults.lessons || []).length;
+          const courseSymbol = courseOk === undefined ? '—' : (courseOk ? '✓' : '✗');
+          console.log(`   ✓ Thumbnail attach result: course=${courseSymbol}, lessons=${lessonsOk}/${lessonsTotal}`);
+          if (courseOk === false) {
+            const errStr = typeof thumbnailAttachResults.course.error === 'string'
+              ? thumbnailAttachResults.course.error
+              : JSON.stringify(thumbnailAttachResults.course.error);
+            console.warn(`     ↳ course error: ${errStr.slice(0, 400)}`);
+          }
+          for (const lr of thumbnailAttachResults.lessons || []) {
+            if (!lr.ok) {
+              const errStr = typeof lr.error === 'string' ? lr.error : JSON.stringify(lr.error);
+              console.warn(`     ↳ lesson ${lr.key} error: ${errStr.slice(0, 400)}`);
+            }
+          }
+        } catch (e) {
+          console.warn(`⚠️  Thumbnail attach threw: ${e.message}`);
+          thumbnailAttachResults = { error: e.message };
+        }
+      }
     }
-
-    let thumbnailAttachResults = thumbnailJob
-      ? { queued: true, jobId: thumbnailJob.jobId, statusUrl: `/jobs`, total: 1 + thumbnailJob.expectedLessonCount }
-      : null;
 
     draft.pushedAt = Date.now();
     draft.cc360 = result;

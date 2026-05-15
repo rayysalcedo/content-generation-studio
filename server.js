@@ -669,9 +669,10 @@ app.post('/api/push/:draftId', async (req, res) => {
           const baseName = key === 'course'
             ? `${slug(draft.structure.courseTitle, 40)}-cover`
             : `${slug(draft.structure.courseTitle, 30)}-${key}-thumb`;
-          // 'product' is the confirmed folder for course-level images.
-          // If lesson posterImages still don't stick after testing, try 'post' for lessons.
-          const folder = 'product';
+          // Match GHL's own URL structure: course thumbnails live under /courses/,
+          // lesson thumbnails under /posts/ (membership API calls lessons "posts").
+          // The import endpoint validates posterImage URLs match these path prefixes.
+          const folder = key === 'course' ? 'courses' : 'posts';
           const { publicUrl } = await uploadCourseMedia({
             token: userJwtForUploads,             // User JWT (NOT the OAuth token)
             tokenId: userJwtTokenId,              // Firebase ID token, if synced

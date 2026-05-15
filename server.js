@@ -753,12 +753,10 @@ app.post('/api/push/:draftId', async (req, res) => {
       console.log(`   (posterImage fields included in import payload — open the course in CC360 to verify they took effect)`);
     }
 
-    // 3. Attach thumbnails via the membership backend API (server-side).
-    // The /courses/courses-exporter/public/import endpoint does NOT honor posterImage
-    // fields, so we have to set them post-import via the membership backend. This
-    // needs a User-authClass JWT — same one we used for signed-url uploads. The
-    // browser-fingerprint headers in backendHeaders() let this call succeed from
-    // Render despite GHL's WAF rules.
+    // 3. Attach thumbnails server-side via backend.memberships.apisystem.tech.
+    // Server-to-server call (CORS doesn't apply), uses the User JWT we already
+    // captured for the upload step. The /courses/courses-exporter/public/import
+    // endpoint does NOT honor posterImage, so this post-import attach is required.
     let thumbnailAttachResults = null;
     const hasThumbnailsToAttach = courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0;
     if (hasThumbnailsToAttach) {
@@ -767,7 +765,7 @@ app.post('/api/push/:draftId', async (req, res) => {
         thumbnailAttachResults = { error: 'no User JWT' };
       } else {
         try {
-          console.log(`🖼️  Attaching thumbnails to course (server-side via membership backend)...`);
+          console.log(`🖼️  Attaching thumbnails via backend.memberships.apisystem.tech...`);
           thumbnailAttachResults = await attachThumbnails({
             backendToken: userJwtForUploads,
             backendTokenId: userJwtTokenId,
@@ -778,7 +776,7 @@ app.post('/api/push/:draftId', async (req, res) => {
             courseThumbnailUrl,
             lessonThumbnailMap: thumbnailUrlByLessonKey,
             onProgress: ({ phase, error }) => {
-              if (phase === 'polling') return;                  // suppress noisy poll-wait logs
+              if (phase === 'polling') return;   // suppress noisy poll-wait logs
               const errStr = error ? ': ' + (typeof error === 'string' ? error : JSON.stringify(error)).slice(0, 250) : '';
               console.log(`   [attach] ${phase}${errStr}`);
             },
@@ -790,8 +788,7 @@ app.post('/api/push/:draftId', async (req, res) => {
           console.log(`   ✓ Thumbnail attach result: course=${courseSymbol}, lessons=${lessonsOk}/${lessonsTotal}`);
           if (courseOk === false) {
             const errStr = typeof thumbnailAttachResults.course.error === 'string'
-              ? thumbnailAttachResults.course.error
-              : JSON.stringify(thumbnailAttachResults.course.error);
+              ? thumbnailAttachResults.course.error : JSON.stringify(thumbnailAttachResults.course.error);
             console.warn(`     ↳ course error: ${errStr.slice(0, 400)}`);
           }
           for (const lr of thumbnailAttachResults.lessons || []) {
@@ -801,7 +798,7 @@ app.post('/api/push/:draftId', async (req, res) => {
             }
           }
         } catch (e) {
-          console.warn(`⚠️  Thumbnail attach threw: ${e.message}`);
+          console.warn(`⚠️  Thumbnail attach failed: ${e.message}`);
           thumbnailAttachResults = { error: e.message };
         }
       }

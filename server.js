@@ -1104,15 +1104,15 @@ function setFinalizeCors(res) {
 }
 app.options('/api/finalize/*', (_req, res) => { setFinalizeCors(res); res.sendStatus(204); });
 
-// List pending jobs (used by the dashboard if we ever add one)
+// List all jobs (pending + recently completed) — UI filters them
 app.get('/api/finalize', async (_req, res) => {
   setFinalizeCors(res);
   try {
     const all = await tokenStore.listInstallations();
     const jobs = all
-      .filter(i => i.kind === 'thumbnail-job' && i.payload?.status === 'pending')
+      .filter(i => i.kind === 'thumbnail-job' && i.payload)
       .map(i => i.payload)
-      .sort((a, b) => b.createdAt - a.createdAt);
+      .sort((a, b) => (b.completedAt || b.createdAt) - (a.completedAt || a.createdAt));
     res.json({ jobs });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -1154,6 +1154,10 @@ app.post('/api/finalize/:jobId/complete', async (req, res) => {
       payload: updatedJob,
     });
     console.log(`🖼️  Thumbnail job ${req.params.jobId} ${updatedJob.status}: course=${result.course?.ok ? '✓' : '✗'}, lessons=${result.lessonsOk || 0}/${result.lessonsTotal || 0}`);
+    if (!result.allOk) {
+      const firstErr = result.course?.error || result.lessons?.find(l => !l.ok)?.error || result.error || '(no error captured)';
+      console.log(`   ↳ first error: ${firstErr}`);
+    }
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });

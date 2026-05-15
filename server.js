@@ -727,17 +727,19 @@ app.post('/api/push/:draftId', async (req, res) => {
     let thumbnailAttachResults = null;
     const hasThumbnailsToAttach = courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0;
     if (hasThumbnailsToAttach) {
-      const userJwt = await getActiveUserJwt();
-      if (!userJwt) {
+      const userAuth = await getActiveUserJwt();
+      if (!userAuth) {
         const msg = 'Thumbnail attach skipped: no User JWT available. Paste one at /setup → "User JWT for thumbnail attach".';
         console.warn(`⚠️  ${msg}`);
         thumbnailAttachResults = { skipped: true, reason: msg };
       } else {
-        console.log(`🖼️  Attaching thumbnails to sidebar fields (auth: pasted user JWT)...`);
+        const authLabel = userAuth.tokenId ? 'user JWT + token-id' : 'user JWT only (no token-id — backend.* will likely 401)';
+        console.log(`🖼️  Attaching thumbnails to sidebar fields (auth: ${authLabel})...`);
         try {
           thumbnailAttachResults = await attachThumbnails({
             token: authToken,
-            backendToken: userJwt,
+            backendToken: userAuth.jwt,
+            backendTokenId: userAuth.tokenId,
             locationId: draftLocationId,
             productId: result.id,
             courseTitle: draft.structure.courseTitle,
@@ -750,7 +752,7 @@ app.post('/api/push/:draftId', async (req, res) => {
               } else if (p.phase === 'polling-retry') {
                 console.log(`   ⏳ poll attempt failed (will retry): ${p.error}`);
                 if (/401|unauthorized/i.test(p.error || '')) {
-                  console.log(`   💡 401 = User JWT expired or invalid. Paste a fresh one at /setup.`);
+                  console.log(`   💡 401 = User JWT expired or token-id missing. Reload CC360 to refresh both at /setup.`);
                 }
               } else if (p.phase === 'course-attached') {
                 console.log(`   ✓ Course thumbnail attached`);
@@ -1031,6 +1033,7 @@ app.get('/api/user-jwt', async (_req, res) => {
       expired: expiresAt ? expiresAt < now : null,
       minutesRemaining: expiresAt ? Math.round((expiresAt - now) / 60000) : null,
       minutesSinceSync: stored?.installedAt ? Math.round((now - stored.installedAt) / 60000) : null,
+      hasTokenId: !!stored?.tokenId,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -1041,6 +1044,7 @@ app.post('/api/user-jwt', async (req, res) => {
   setJwtCors(res);
   try {
     const jwt = String(req.body?.jwt || '').trim().replace(/^Bearer\s+/i, '');
+    const tokenId = String(req.body?.tokenId || '').trim();
     if (!jwt) return res.status(400).json({ error: 'JWT is required' });
 
     const payload = decodeJwtPayload(jwt);
@@ -1055,6 +1059,7 @@ app.post('/api/user-jwt', async (req, res) => {
     await tokenStore.saveInstallation({
       locationId: USER_JWT_KEY,
       accessToken: jwt,
+      tokenId: tokenId || null,        // Firebase ID token header for backend.* CSRF check
       expiresAt: payload.exp ? payload.exp * 1000 : null,
       kind: 'user-jwt',
       userId: payload.authClassId || null,
@@ -1065,6 +1070,7 @@ app.post('/api/user-jwt', async (req, res) => {
       ok: true,
       expiresAt: payload.exp * 1000,
       minutesRemaining: Math.round((payload.exp * 1000 - Date.now()) / 60000),
+      hasTokenId: !!tokenId,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -1088,11 +1094,11 @@ async function getActiveUserJwt() {
     if (stored?.accessToken) {
       const payload = decodeJwtPayload(stored.accessToken);
       if (payload?.exp && payload.exp * 1000 > Date.now() + 60_000) {
-        return stored.accessToken;
+        return { jwt: stored.accessToken, tokenId: stored.tokenId || null };
       }
     }
   } catch {}
-  return CC360_USER_JWT || null;
+  return CC360_USER_JWT ? { jwt: CC360_USER_JWT, tokenId: null } : null;
 }
 
 // ---------------------------------------------------------------------

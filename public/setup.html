@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CC360 Course Studio · Setup</title>
+<title>CC360 Studio · Setup</title>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -73,29 +73,30 @@
   .toast-ok { border-color: var(--success); }
   .toast-bad { border-color: var(--danger); }
   code { font-family: ui-monospace, monospace; background: var(--panel-2); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  .pill-info { background: rgba(99, 102, 241, 0.15); color: var(--accent); }
 </style>
 </head>
 <body>
   <div class="page">
-    <div class="brand"><span class="brand-dot"></span><span>CC360 / Course Studio · Setup</span></div>
+    <div class="brand"><span class="brand-dot"></span><span>CC360 / Studio · Setup</span></div>
     <h1>Connect a <em>sub-account</em>.</h1>
     <p class="lede">
-      Install the Course Studio app on a CC360 sub-account so the tool can push
-      courses and upload media there. Each sub-account installs once — after that,
-      anyone with the form URL can generate courses for it.
+      Install the Studio app on a CC360 sub-account (or at the agency level) so the tool can push
+      courses, funnels, and media there. Agency-level installs cover every sub-account under
+      that agency — location tokens get minted on demand.
     </p>
 
     <div class="card">
       <h2>Install on a sub-account</h2>
-      <p>You'll be redirected to GoHighLevel. Sign in as a user with admin access to the sub-account, choose the sub-account from the list, and approve the requested permissions. You'll come back here once it's installed.</p>
+      <p>You'll be redirected to GoHighLevel. Sign in as a user with admin access, choose where to install (agency or sub-account), and approve the requested permissions. You'll come back here once it's installed.</p>
       <a class="install-btn" href="/oauth/install">
-        <span>Install Course Studio</span>
+        <span>Install Studio</span>
         <span class="arrow">→</span>
       </a>
     </div>
 
     <div class="card">
-      <h2>Currently installed sub-accounts</h2>
+      <h2>Currently installed</h2>
       <div id="install-list-host">
         <div class="empty">Loading…</div>
       </div>
@@ -137,7 +138,7 @@
     </div>
 
     <div style="text-align:center;margin-top:20px;">
-      <a class="back" href="/">← Back to course builder</a>
+      <a class="back" href="/">← Back to Studio</a>
     </div>
   </div>
 
@@ -168,21 +169,32 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 }
 
-function render(list) {
-  if (!list || !list.length) {
-    host.innerHTML = '<div class="empty">No sub-accounts installed yet. Click "Install Course Studio" above to get started.</div>';
+function render(installs, agencies) {
+  // Merge agencies (company installs) with sub-account installs, marking each kind
+  const all = [
+    ...(agencies || []).map(a => ({
+      ...a,
+      locationId: `company:${a.companyId}`,
+      locationName: a.companyName || 'Agency-level install',
+      isAgency: true,
+    })),
+    ...(installs || []),
+  ];
+  if (!all.length) {
+    host.innerHTML = '<div class="empty">No installations yet. Click "Install Studio" above to get started.</div>';
     return;
   }
-  host.innerHTML = list.map(i => {
+  host.innerHTML = all.map(i => {
     const expired = i.expiresAt && i.expiresAt < Date.now();
+    const agencyBadge = i.isAgency ? '<span class="pill pill-info">AGENCY</span> ' : '';
     return `
       <div class="install-row">
         <div class="install-info">
-          <div class="install-name">${escapeHtml(i.locationName || 'Sub-account')}</div>
+          <div class="install-name">${escapeHtml(i.locationName || (i.isAgency ? 'Agency' : 'Sub-account'))}</div>
           <div class="install-id">${escapeHtml(i.locationId)}</div>
           <div class="install-meta">
-            <span class="pill ${expired ? 'pill-bad' : 'pill-ok'}">${expired ? 'TOKEN EXPIRED (auto-refreshes)' : 'ACTIVE'}</span>
-            Installed ${fmtDate(i.installedAt)}${i.companyName ? ' · ' + escapeHtml(i.companyName) : ''}
+            ${agencyBadge}<span class="pill ${expired ? 'pill-bad' : 'pill-ok'}">${expired ? 'TOKEN EXPIRED (auto-refreshes)' : 'ACTIVE'}</span>
+            Installed ${fmtDate(i.installedAt)}${i.companyName && !i.isAgency ? ' · ' + escapeHtml(i.companyName) : ''}
           </div>
         </div>
         <button class="danger-btn" data-id="${escapeHtml(i.locationId)}">Remove</button>
@@ -193,7 +205,11 @@ function render(list) {
   host.querySelectorAll('.danger-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.id;
-      if (!confirm(`Remove this installation? The tool will stop being able to push to this sub-account until reinstalled.`)) return;
+      const isAgency = id.startsWith('company:');
+      const warn = isAgency
+        ? `Remove this agency-level install? All location tokens minted from it will stop working until you re-install the agency app.`
+        : `Remove this installation? The tool will stop being able to push to this sub-account until reinstalled.`;
+      if (!confirm(warn)) return;
       try {
         const res = await fetch(`/api/installations/${encodeURIComponent(id)}`, { method: 'DELETE' });
         if (!res.ok) throw new Error(`Server returned ${res.status}`);
@@ -211,7 +227,7 @@ async function loadInstallations() {
     const res = await fetch('/api/installations');
     if (!res.ok) throw new Error(`Server returned ${res.status}`);
     const data = await res.json();
-    render(data.installations || []);
+    render(data.installations || [], data.agencies || []);
   } catch (e) {
     host.innerHTML = `<div class="empty">Could not load installations: ${escapeHtml(e.message)}</div>`;
   }

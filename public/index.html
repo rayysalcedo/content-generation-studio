@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CC360 Course Studio</title>
+<title>CC360 Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -315,17 +315,18 @@
 </head>
 <body data-mode="pdf">
   <div class="page">
-    <div class="brand">
+    <div class="brand" style="display:flex; align-items:center;">
       <span class="brand-dot"></span>
-      <span>CC360 / Course Studio</span>
+      <span>CC360 / Studio</span>
+      <a href="/funnel-only" style="margin-left:auto; font-size:11px; color:var(--text-dim); text-decoration:none; font-family:var(--mono); text-transform:uppercase; letter-spacing:0.08em; padding:5px 12px; border:1px solid var(--border); border-radius:999px; transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-dim)';">Funnel only →</a>
     </div>
 
     <div class="eyebrow">Step 01 — Generate</div>
-    <h1>Build a course<br/>from a <em>PDF</em> or <em>idea</em>.</h1>
+    <h1>Build a <em>course</em><br/>and <em>AI funnel</em><br/>from a PDF or idea.</h1>
     <p class="lede">
-      Upload existing course material or describe a new course concept. We'll structure
-      it, draft the lessons, and let you review and refine before publishing to your
-      CC360 sub-account.
+      Upload existing course material or describe a new concept. We'll structure the
+      course, draft every lesson, optionally write a complete 3-step sales funnel,
+      and let you review everything before pushing to your CC360 sub-account.
     </p>
 
     <!-- Mode toggle -->
@@ -481,6 +482,90 @@
         </label>
       </div>
 
+      <!-- ============================================== -->
+      <!-- FUNNEL TOGGLE — generates 3-step sales funnel  -->
+      <!-- ============================================== -->
+      <div class="field">
+        <div class="label">
+          <span class="label-text">AI Funnel</span>
+          <span class="label-hint">3-step sales funnel: sales page · checkout · confirmation</span>
+        </div>
+        <label class="workbook-toggle" for="generateFunnel">
+          <input type="checkbox" id="generateFunnel" name="generateFunnel" />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          <span class="toggle-label">
+            <span class="toggle-title">Generate AI funnel</span>
+            <span class="toggle-desc">Writes every section of a complete sales funnel (hero, problem/solution, modules, testimonials, pricing, FAQ, checkout, confirmation) and generates module thumbnails + a laptop mockup. Adds ~2-3 min. Requires your master funnel template wired up — see <code style="font-family:ui-monospace,monospace;">FUNNEL_SETUP.md</code>.</span>
+          </span>
+        </label>
+      </div>
+
+      <!-- Funnel-only fields, shown when the toggle above is on -->
+      <div id="funnel-fields" style="display:none; border-left: 2px solid var(--accent); padding-left: 18px; margin-bottom: 24px;">
+        <div class="row">
+          <div class="field" style="margin-bottom:18px;">
+            <div class="label">
+              <span class="label-text">Instructor First Name</span>
+              <span class="label-required">required for funnel</span>
+            </div>
+            <input type="text" name="instructorName" id="instructorName" placeholder="e.g. Jane" />
+          </div>
+          <div class="field" style="margin-bottom:18px;">
+            <div class="label">
+              <span class="label-text">Course Price</span>
+              <span class="label-required">required for funnel</span>
+            </div>
+            <input type="text" name="coursePrice" id="coursePrice" value="$497 one time" placeholder="e.g. $997 one time" />
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:18px;">
+          <div class="label">
+            <span class="label-text">Instructor Photo</span>
+            <span class="label-required">required for funnel · max 8 MB · JPG/PNG</span>
+          </div>
+          <label class="dropzone" id="photo-dropzone" style="padding:20px 16px;">
+            <input type="file" name="instructorPhoto" id="instructor-photo-input" accept="image/jpeg,image/png,image/webp" />
+            <div class="dz-primary">Drop a photo or <span>browse</span></div>
+            <div class="dz-secondary">Headshot recommended</div>
+          </label>
+          <div class="file-preview" id="photo-preview">
+            <span style="font-size:16px;">📷</span>
+            <div style="flex:1;min-width:0;">
+              <div class="fp-name" id="photo-name">—</div>
+              <div class="fp-meta" id="photo-meta">—</div>
+            </div>
+            <button type="button" class="fp-remove" id="photo-remove">✕</button>
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:18px;">
+          <div class="label">
+            <span class="label-text">Dark Section Background</span>
+            <span class="label-required">required for funnel</span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <input type="color" id="brandDarkBgColor" value="#0A1C3D" style="width:44px; height:44px; border:1px solid var(--border-strong); border-radius:6px; padding:2px; cursor:pointer;" />
+            <input type="text" id="brandDarkBgHex" name="brandDarkBg" value="#0A1C3D" maxlength="7" pattern="^#[0-9a-fA-F]{6}$" style="flex:1; font-family:ui-monospace,monospace; text-transform:uppercase;" />
+          </div>
+          <div style="font-size:12px;color:var(--text-dim);margin-top:6px;line-height:1.5;">
+            The dark background color for hero, testimonials, FAQ, and footer sections. The brand color you picked above is used as the funnel's primary accent.
+          </div>
+        </div>
+
+        <!-- Funnel Pitch — required only in PDF mode -->
+        <div class="field pdf-only" style="margin-bottom:0;">
+          <div class="label">
+            <span class="label-text">Funnel Pitch</span>
+            <span class="label-required">required for funnel in PDF mode · 1-3 sentences</span>
+          </div>
+          <textarea name="funnelPitch" id="funnelPitch" placeholder="A short pitch for the AI funnel copywriter. The funnel needs a description-like seed, separate from the PDF. Describe the course's transformation in 1-3 sentences — what does it deliver, who's it for, why does it matter?" style="min-height:80px;"></textarea>
+        </div>
+        <div class="desc-only" style="font-size:12px;color:var(--text-dim);line-height:1.5;">
+          ℹ︎ The Course Description above doubles as the funnel pitch (the seed for the AI funnel copywriter).
+        </div>
+      </div>
+
       <div class="submit-row">
         <div class="submit-meta">Estimated time: <strong style="color:var(--text-dim);">3–6 min</strong> <span style="opacity:0.7;">(scales with course size; thumbnails add ~2-3 min)</span></div>
         <button type="submit" class="submit" id="submit-btn">
@@ -566,6 +651,53 @@ swatches.forEach(s => {
   });
 });
 
+// ============ Funnel toggle: show/hide funnel fields ============
+const funnelToggle = document.getElementById('generateFunnel');
+const funnelFields = document.getElementById('funnel-fields');
+funnelToggle.addEventListener('change', () => {
+  funnelFields.style.display = funnelToggle.checked ? 'block' : 'none';
+});
+
+// ============ Funnel photo dropzone ============
+const photoZone = document.getElementById('photo-dropzone');
+const photoInput = document.getElementById('instructor-photo-input');
+const photoPreview = document.getElementById('photo-preview');
+const photoName = document.getElementById('photo-name');
+const photoMeta = document.getElementById('photo-meta');
+['dragenter', 'dragover'].forEach(evt => {
+  photoZone.addEventListener(evt, e => { e.preventDefault(); photoZone.classList.add('dragging'); });
+});
+['dragleave', 'drop'].forEach(evt => {
+  photoZone.addEventListener(evt, e => { e.preventDefault(); photoZone.classList.remove('dragging'); });
+});
+photoZone.addEventListener('drop', e => {
+  if (e.dataTransfer.files.length) {
+    photoInput.files = e.dataTransfer.files;
+    showPhoto();
+  }
+});
+photoInput.addEventListener('change', showPhoto);
+document.getElementById('photo-remove').addEventListener('click', () => {
+  photoInput.value = '';
+  photoPreview.classList.remove('visible');
+});
+function showPhoto() {
+  const f = photoInput.files[0];
+  if (!f) return;
+  photoName.textContent = f.name;
+  photoMeta.textContent = `${(f.size / 1024 / 1024).toFixed(2)} MB · ${f.type || 'image'}`;
+  photoPreview.classList.add('visible');
+}
+
+// ============ Color picker sync (dark bg) ============
+const darkBgColor = document.getElementById('brandDarkBgColor');
+const darkBgHex = document.getElementById('brandDarkBgHex');
+darkBgColor.addEventListener('input', () => { darkBgHex.value = darkBgColor.value.toUpperCase(); });
+darkBgHex.addEventListener('input', () => {
+  const v = darkBgHex.value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) darkBgColor.value = v.toLowerCase();
+});
+
 // ============ Form submission ============
 const form = document.getElementById('course-form');
 const submitBtn = document.getElementById('submit-btn');
@@ -588,6 +720,19 @@ form.addEventListener('submit', async (e) => {
   if (mode === 'description') {
     const desc = document.getElementById('description').value.trim();
     if (desc.length < 20) return showError('Please provide a course description (at least 20 characters)');
+  }
+
+  // Funnel validation (only if toggle is on)
+  const funnelOn = funnelToggle.checked;
+  if (funnelOn) {
+    if (!document.getElementById('instructorName').value.trim()) return showError('Funnel: instructor first name is required');
+    if (!photoInput.files.length) return showError('Funnel: instructor photo upload is required');
+    if (!document.getElementById('coursePrice').value.trim()) return showError('Funnel: course price is required');
+    if (!/^#[0-9a-fA-F]{6}$/.test(darkBgHex.value.trim())) return showError('Funnel: dark section color must be a valid 6-digit hex');
+    if (mode === 'pdf') {
+      const pitch = document.getElementById('funnelPitch').value.trim();
+      if (pitch.length < 20) return showError('Funnel: pitch must be at least 20 characters when course mode is PDF');
+    }
   }
 
   // Persist for next time
@@ -614,6 +759,17 @@ form.addEventListener('submit', async (e) => {
       if (mc) fd.append('moduleCount', mc);
       if (lpm) fd.append('lessonsPerModule', lpm);
     }
+    // Funnel fields (only sent if toggle is on)
+    fd.append('generateFunnel', funnelOn ? 'true' : 'false');
+    if (funnelOn) {
+      fd.append('instructorName', document.getElementById('instructorName').value.trim());
+      fd.append('coursePrice', document.getElementById('coursePrice').value.trim());
+      fd.append('brandDarkBg', darkBgHex.value.trim().toUpperCase());
+      fd.append('instructorPhoto', photoInput.files[0]);
+      if (mode === 'pdf') {
+        fd.append('funnelPitch', document.getElementById('funnelPitch').value.trim());
+      }
+    }
 
     const res = await fetch('/api/generate', { method: 'POST', body: fd });
     const data = await res.json();
@@ -631,7 +787,7 @@ function setLoading(loading) {
   const label = submitBtn.querySelector('.btn-label');
   const arrow = submitBtn.querySelector('.arrow');
   if (loading) {
-    label.textContent = 'Generating outline…';
+    label.textContent = funnelToggle.checked ? 'Generating course + funnel…' : 'Generating outline…';
     arrow.innerHTML = '<span class="spinner"></span>';
   } else {
     label.textContent = 'Generate Outline';

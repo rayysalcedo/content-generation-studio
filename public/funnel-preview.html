@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CC360 Funnel Only — Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  :root {
+    --accent: #6366f1;
+    --accent-soft: rgba(99, 102, 241, 0.08);
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --surface-2: #f4f4f5;
+    --text: #18181b;
+    --text-dim: #525252;
+    --text-faint: #8a8a85;
+    --border: #e5e5e0;
+    --border-strong: #d4d4d0;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --display: 'Fraunces', ui-serif, Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+  body { font-family: var(--sans); color: var(--text); background: var(--bg); }
+  .header {
+    height: 60px;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+  .brand-dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; }
+  .testing-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    background: #fef3c7; color: #92400e;
+    font-family: var(--mono); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;
+  }
+  .header-spacer { flex: 1; }
+  .header-controls { display: flex; align-items: center; gap: 10px; }
+  .regen-counter { font-family: var(--mono); font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .btn {
+    border: 1px solid var(--border-strong);
+    background: var(--surface); color: var(--text);
+    border-radius: 6px; padding: 8px 14px;
+    font-family: var(--sans); font-size: 13px; font-weight: 500;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    text-decoration: none; transition: all 0.15s;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-primary:hover:not(:disabled) { background: #1648b7; border-color: #1648b7; color: white; }
+  .btn-accent { background: #16a34a; color: white; border-color: #16a34a; }
+  .btn-accent:hover { background: #15803d; border-color: #15803d; color: white; }
+
+  /* Funnel editor */
+  .funnel-view {
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+    background: var(--bg);
+    padding: 24px 32px 96px;
+  }
+  .funnel-view-inner { max-width: 880px; margin: 0 auto; }
+  .funnel-step-bar {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 24px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .funnel-step-label {
+    font-family: var(--mono); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  .funnel-step-select {
+    flex: 1;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: var(--sans); font-size: 14px; font-weight: 500;
+    background: var(--surface); color: var(--text);
+    cursor: pointer;
+  }
+  .funnel-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .funnel-section-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer; user-select: none;
+  }
+  .funnel-section-head:hover { background: var(--surface-2); }
+  .funnel-section.open .funnel-section-head { border-bottom: 1px solid var(--border); }
+  .funnel-section-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--surface-2); color: var(--text-dim);
+    font-family: var(--mono); font-size: 10px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .funnel-section.open .funnel-section-num { background: var(--accent); color: white; }
+  .funnel-section-title { flex: 1; font-family: var(--display); font-size: 16px; font-weight: 500; }
+  .funnel-section-meta { font-family: var(--mono); font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .funnel-section-body { display: none; padding: 16px 18px 20px; }
+  .funnel-section.open .funnel-section-body { display: block; }
+  .funnel-field { margin-bottom: 14px; }
+  .funnel-field:last-child { margin-bottom: 0; }
+  .funnel-field-label {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .funnel-field input[type="text"], .funnel-field textarea {
+    width: 100%;
+    border: 1px solid var(--border-strong); border-radius: 6px;
+    padding: 9px 12px;
+    font-family: var(--sans); font-size: 13px;
+    color: var(--text); background: var(--surface);
+  }
+  .funnel-field input:focus, .funnel-field textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .funnel-field textarea { resize: vertical; min-height: 50px; }
+  .funnel-grid { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  .funnel-item-card {
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px; background: #fafafa;
+    margin-bottom: 10px;
+  }
+  .funnel-item-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .funnel-item-num {
+    width: 20px; height: 20px; border-radius: 4px;
+    background: var(--accent); color: white;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .funnel-module-row { display: grid; grid-template-columns: 120px 1fr; gap: 12px; align-items: start; }
+  .funnel-img {
+    border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden; aspect-ratio: 3 / 4;
+    background: var(--surface-2);
+  }
+  .funnel-img img { width: 100%; height: 100%; object-fit: cover; }
+  .funnel-img-empty {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 9px;
+    color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 8px; text-align: center;
+  }
+  .funnel-img.landscape { aspect-ratio: 3 / 2; max-width: 260px; }
+  .funnel-color-preview {
+    margin-top: 10px; padding: 20px 22px;
+    border-radius: 8px; color: white;
+    border: 1px solid var(--border);
+  }
+  .funnel-color-eyebrow {
+    font-family: var(--mono); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .funnel-color-h { font-family: var(--display); font-size: 18px; font-weight: 500; margin-bottom: 10px; }
+  .funnel-color-cta {
+    display: inline-block; padding: 8px 18px;
+    border-radius: 5px; color: white;
+    font-weight: 600; font-size: 12px;
+  }
+  .funnel-color-row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+  .funnel-color-cell { display: flex; gap: 8px; align-items: center; }
+  .funnel-color-cell input[type="color"] {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px; padding: 1px;
+    cursor: pointer;
+  }
+  .funnel-color-cell input[type="text"] {
+    width: 90px;
+    font-family: ui-monospace, monospace;
+    text-transform: uppercase;
+    padding: 6px 8px; font-size: 12px;
+    border: 1px solid var(--border-strong); border-radius: 4px;
+  }
+  .funnel-fixed-note {
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  /* Push overlay */
+  .push-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .push-card {
+    background: var(--surface);
+    border-radius: 12px;
+    width: 100%; max-width: 520px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .push-card-head {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .push-card-title { font-family: var(--display); font-size: 18px; font-weight: 500; flex: 1; }
+  .push-card-body { padding: 18px 22px; max-height: 60vh; overflow-y: auto; }
+  .push-step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  .push-step-icon {
+    width: 20px; height: 20px; flex-shrink: 0;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  .push-step.done .push-step-icon { background: #16a34a; color: white; }
+  .push-step.active .push-step-icon { background: var(--accent); color: white; animation: pulse 1.5s ease-in-out infinite; }
+  .push-step.failed .push-step-icon { background: var(--danger); color: white; }
+  .push-step.pending .push-step-icon { background: var(--surface-2); color: var(--text-faint); border: 1px solid var(--border-strong); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  .push-step-text { flex: 1; }
+  .push-step-meta { font-family: var(--mono); font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .push-card-foot {
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    background: var(--surface-2);
+    display: flex; justify-content: flex-end; gap: 10px;
+  }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: white;
+    padding: 12px 18px; border-radius: 8px;
+    font-size: 13px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    animation: slideUp 0.2s ease-out;
+    z-index: 150;
+  }
+  .toast.error { background: var(--danger); }
+  @keyframes slideUp {
+    from { transform: translate(-50%, 20px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+  }
+
+  .spinner-big {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: var(--mono); font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+function App() {
+  const draftId = window.location.pathname.split('/').pop();
+  const [funnel, setFunnel] = useState(null);
+  const [regen, setRegen] = useState({ used: 0, remaining: 3, limit: 3 });
+  const [funnelStep, setFunnelStep] = useState('sales');
+  const [openSections, setOpenSections] = useState(new Set(['brand', 'hero']));
+  const [pushEvents, setPushEvents] = useState([]);
+  const [pushOpen, setPushOpen] = useState(false);
+  const [pushDone, setPushDone] = useState(false);
+  const [pushed, setPushed] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [regenLoading, setRegenLoading] = useState(false);
+  const saveTimer = useRef(null);
+
+  // Load draft
+  useEffect(() => {
+    fetch(`/api/draft/${draftId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { showToast(data.error, true); return; }
+        if (!data.funnel?.generated) { showToast('No funnel content in this draft', true); return; }
+        setFunnel({
+          content: data.funnel.content,
+          input: data.funnel.input || {},
+          imageKeys: data.funnel.imageKeys || [],
+        });
+        setRegen(data.regen);
+      })
+      .catch(e => showToast(e.message, true));
+  }, [draftId]);
+
+  // Auto-save
+  useEffect(() => {
+    if (!funnel) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      fetch(`/api/draft/${draftId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          funnelContent: funnel.content,
+          brandPrimary: funnel.input.brandPrimary,
+          brandDarkBg: funnel.input.brandDarkBg,
+          coursePrice: funnel.input.coursePrice,
+        }),
+      });
+    }, 600);
+  }, [funnel, draftId]);
+
+  function showToast(msg, isError = false) {
+    setToast({ msg, isError });
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  function toggleSection(key) {
+    const next = new Set(openSections);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    setOpenSections(next);
+  }
+  function setField(path, value) {
+    setFunnel(prev => {
+      if (!prev) return prev;
+      const next = structuredClone(prev);
+      const parts = path.split('.');
+      let cur = next.content;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const k = parts[i];
+        if (cur[k] === undefined || cur[k] === null) cur[k] = /^\d+$/.test(parts[i + 1]) ? [] : {};
+        cur = cur[k];
+      }
+      cur[parts[parts.length - 1]] = value;
+      return next;
+    });
+  }
+  function setInput(key, value) {
+    setFunnel(prev => prev ? { ...prev, input: { ...prev.input, [key]: value } } : prev);
+  }
+
+  async function regenerate() {
+    if (regen.remaining <= 0) {
+      showToast('Regen limit reached for this sub-account', true);
+      return;
+    }
+    if (!confirm('Regenerate the funnel? This will overwrite all current edits.')) return;
+    setRegenLoading(true);
+    try {
+      const res = await fetch(`/api/funnel-only/regenerate/${draftId}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Regeneration failed');
+      setFunnel(prev => ({
+        ...prev,
+        content: data.funnel.content,
+        imageKeys: data.funnel.imageKeys || [],
+      }));
+      setRegen(data.regen);
+      showToast(`Regenerated. ${data.regen.remaining}/${data.regen.limit} remaining.`);
+    } catch (e) {
+      showToast(e.message, true);
+    } finally {
+      setRegenLoading(false);
+    }
+  }
+
+  async function pushToCC360() {
+    if (!confirm('Push this funnel to CC360? This will update custom values on your sub-account.')) return;
+    setPushEvents([]);
+    setPushOpen(true);
+    setPushDone(false);
+    try {
+      const res = await fetch(`/api/funnel-only/push/${draftId}`, { method: 'POST' });
+      if (!res.ok && !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Push failed (HTTP ${res.status})`);
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const event = JSON.parse(trimmed);
+            setPushEvents(prev => [...prev, event]);
+            if (event.phase === 'done') {
+              setPushed(event.funnel);
+              setPushDone(true);
+            } else if (event.phase === 'error') {
+              setPushDone(true);
+              showToast(event.error || 'Push failed', true);
+            }
+          } catch (e) {}
+        }
+      }
+    } catch (e) {
+      showToast(e.message, true);
+      setPushDone(true);
+    }
+  }
+
+  if (!funnel) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+        <div className="spinner-big"></div>
+        <div className="loading-text">Loading funnel draft…</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="header">
+        <div className="brand">
+          <span className="brand-dot"></span>
+          <span>CC360 / Funnel Only</span>
+        </div>
+        <div className="header-spacer"></div>
+        <div className="header-controls">
+          <span className="regen-counter">Regens: <strong>{regen.remaining}</strong>/{regen.limit}</span>
+          <button className="btn" onClick={regenerate} disabled={regen.remaining <= 0 || regenLoading}>
+            {regenLoading ? '⟳ Regenerating…' : '↻ Regenerate'}
+          </button>
+          <a className="btn" href="/funnel-only" style={{ textDecoration: 'none' }}>← New funnel</a>
+          <button className="btn btn-primary" onClick={pushToCC360}>
+            ✓ Push Funnel to CC360
+          </button>
+        </div>
+      </div>
+
+      <FunnelView
+        funnel={funnel}
+        draftId={draftId}
+        step={funnelStep}
+        setStep={setFunnelStep}
+        openSections={openSections}
+        toggleSection={toggleSection}
+        setField={setField}
+        setInput={setInput}
+      />
+
+      {pushOpen && (
+        <PushOverlay
+          events={pushEvents}
+          done={pushDone}
+          onClose={() => setPushOpen(false)}
+          cvResult={pushed?.customValues}
+        />
+      )}
+
+      {toast && (
+        <div className={`toast ${toast.isError ? 'error' : ''}`}>{toast.msg}</div>
+      )}
+    </>
+  );
+}
+
+// ============================================================
+// FunnelView — same component shape as the unified preview
+// ============================================================
+function FunnelView({ funnel, draftId, step, setStep, openSections, toggleSection, setField, setInput }) {
+  const c = funnel.content;
+  const input = funnel.input || {};
+  if (!c) return null;
+
+  const FunnelSection = ({ id, num, title, meta, children }) => (
+    <div className={`funnel-section ${openSections.has(id) ? 'open' : ''}`}>
+      <div className="funnel-section-head" onClick={() => toggleSection(id)}>
+        <div className="funnel-section-num">{num}</div>
+        <div className="funnel-section-title">{title}</div>
+        {meta && <div className="funnel-section-meta">{meta}</div>}
+      </div>
+      <div className="funnel-section-body">{children}</div>
+    </div>
+  );
+
+  const Field = ({ label, value, onChange, multiline = false, minHeight }) => (
+    <div className="funnel-field">
+      <label className="funnel-field-label">{label}</label>
+      {multiline
+        ? <textarea value={value || ''} onChange={e => onChange(e.target.value)} style={minHeight ? { minHeight } : undefined} />
+        : <input type="text" value={value || ''} onChange={e => onChange(e.target.value)} />}
+    </div>
+  );
+
+  const brandPrimary = input.brandPrimary || '#1A56DB';
+  const brandDarkBg = input.brandDarkBg || '#0A1C3D';
+
+  return (
+    <div className="funnel-view">
+      <div className="funnel-view-inner">
+        <div className="funnel-step-bar">
+          <span className="funnel-step-label">Funnel Step</span>
+          <select className="funnel-step-select" value={step} onChange={e => setStep(e.target.value)}>
+            <option value="sales">Step 1 — Course Sales Page</option>
+            <option value="checkout">Step 2 — Checkout / Order Form</option>
+            <option value="confirmation">Step 3 — Confirmation Page</option>
+          </select>
+        </div>
+
+        <FunnelSection id="brand" num="⨀" title="Brand Colors" meta="applies to all 3 steps">
+          <div className="funnel-color-row">
+            <div>
+              <div className="funnel-field-label">Primary accent</div>
+              <div className="funnel-color-cell">
+                <input type="color" value={brandPrimary} onChange={e => setInput('brandPrimary', e.target.value.toUpperCase())} />
+                <input type="text" value={brandPrimary} maxLength={7} onChange={e => setInput('brandPrimary', e.target.value.trim())} />
+              </div>
+            </div>
+            <div>
+              <div className="funnel-field-label">Dark section bg</div>
+              <div className="funnel-color-cell">
+                <input type="color" value={brandDarkBg} onChange={e => setInput('brandDarkBg', e.target.value.toUpperCase())} />
+                <input type="text" value={brandDarkBg} maxLength={7} onChange={e => setInput('brandDarkBg', e.target.value.trim())} />
+              </div>
+            </div>
+          </div>
+          <div className="funnel-color-preview" style={{ background: brandDarkBg }}>
+            <div className="funnel-color-eyebrow" style={{ color: brandPrimary }}>{c.hero?.eyebrow}</div>
+            <div className="funnel-color-h">{c.hero?.headline}</div>
+            <span className="funnel-color-cta" style={{ background: brandPrimary }}>{c.hero?.cta}</span>
+          </div>
+        </FunnelSection>
+
+        {step === 'sales' && (
+          <>
+            <FunnelSection id="hero" num="1" title="Hero Section" meta="top of sales page">
+              <Field label="Eyebrow tagline" value={c.hero.eyebrow} onChange={v => setField('hero.eyebrow', v)} />
+              <Field label="Headline" value={c.hero.headline} onChange={v => setField('hero.headline', v)} multiline minHeight="60px" />
+              <Field label="Subheadline" value={c.hero.subheadline} onChange={v => setField('hero.subheadline', v)} multiline minHeight="50px" />
+              <Field label="CTA button" value={c.hero.cta} onChange={v => setField('hero.cta', v)} />
+              <Field label="Star rating subtext" value={c.hero.star_text} onChange={v => setField('hero.star_text', v)} />
+            </FunnelSection>
+
+            <FunnelSection id="problem" num="2" title='Problem / Solution' meta='"Does this sound like you?"'>
+              <Field label="Eyebrow" value={c.problem.eyebrow} onChange={v => setField('problem.eyebrow', v)} />
+              <Field label="Headline" value={c.problem.headline} onChange={v => setField('problem.headline', v)} />
+              <div className="funnel-grid">
+                <div>
+                  <div className="funnel-field-label">Pain points</div>
+                  {c.problem.pains.map((p, i) => (
+                    <textarea key={i} value={p} onChange={e => setField(`problem.pains.${i}`, e.target.value)} style={{ marginBottom: 6, minHeight: 42 }} />
+                  ))}
+                </div>
+                <div>
+                  <div className="funnel-field-label">Solutions</div>
+                  {c.problem.solutions.map((s, i) => (
+                    <textarea key={i} value={s} onChange={e => setField(`problem.solutions.${i}`, e.target.value)} style={{ marginBottom: 6, minHeight: 42 }} />
+                  ))}
+                </div>
+              </div>
+            </FunnelSection>
+
+            <FunnelSection id="audience" num="3" title="Who Is This For" meta="headline + 8 tags">
+              <Field label="Headline" value={c.audience.headline} onChange={v => setField('audience.headline', v)} multiline minHeight="50px" />
+              <div className="funnel-field-label">Audience tags</div>
+              <div className="funnel-grid">
+                {c.audience.tags.map((t, i) => (
+                  <input key={i} type="text" value={t} onChange={e => setField(`audience.tags.${i}`, e.target.value)} style={{ marginBottom: 6 }} />
+                ))}
+              </div>
+            </FunnelSection>
+
+            <FunnelSection id="instructor" num="4" title="About the Instructor" meta='"Meet …"'>
+              <Field label='Instructor first name' value={input.instructorName} onChange={v => setInput('instructorName', v)} />
+              <Field label="Bio paragraph 1" value={c.instructor.bio_1} onChange={v => setField('instructor.bio_1', v)} multiline minHeight="70px" />
+              <Field label="Bio paragraph 2" value={c.instructor.bio_2} onChange={v => setField('instructor.bio_2', v)} multiline minHeight="70px" />
+              <Field label="Bio paragraph 3" value={c.instructor.bio_3} onChange={v => setField('instructor.bio_3', v)} multiline minHeight="60px" />
+              <div className="funnel-field-label">Credentials (6 bullets)</div>
+              {c.instructor.credentials.map((cr, i) => (
+                <textarea key={i} value={cr} onChange={e => setField(`instructor.credentials.${i}`, e.target.value)} style={{ marginBottom: 6, minHeight: 42 }} />
+              ))}
+            </FunnelSection>
+
+            <FunnelSection id="testimonials" num="5" title="Testimonials" meta="3 student quotes">
+              {c.testimonials.map((t, i) => (
+                <div key={i} className="funnel-item-card">
+                  <div className="funnel-item-header">
+                    <div className="funnel-item-num">{i + 1}</div>
+                    <span>Testimonial {i + 1}</span>
+                  </div>
+                  <textarea value={t.quote} onChange={e => setField(`testimonials.${i}.quote`, e.target.value)} style={{ minHeight: 60, marginBottom: 6 }} />
+                  <input type="text" value={t.name} onChange={e => setField(`testimonials.${i}.name`, e.target.value)} />
+                </div>
+              ))}
+            </FunnelSection>
+
+            <FunnelSection id="inside" num="6" title="What's Waiting Inside" meta="6 teaser cards">
+              <div className="funnel-grid">
+                {c.inside_cards.map((card, i) => (
+                  <div key={i} className="funnel-item-card">
+                    <div className="funnel-item-header">
+                      <div className="funnel-item-num">{i + 1}</div>
+                      <span>Card {i + 1}</span>
+                    </div>
+                    <input type="text" value={card.title} onChange={e => setField(`inside_cards.${i}.title`, e.target.value)} style={{ marginBottom: 6 }} />
+                    <textarea value={card.desc} onChange={e => setField(`inside_cards.${i}.desc`, e.target.value)} style={{ minHeight: 50 }} />
+                  </div>
+                ))}
+              </div>
+            </FunnelSection>
+
+            <FunnelSection id="modules" num="7" title="Modules" meta="5 weeks + 3 bonus">
+              {c.modules.map((m, i) => {
+                const key = `module_${i + 1}`;
+                const has = funnel.imageKeys.includes(key);
+                return (
+                  <div key={i} className="funnel-item-card">
+                    <div className="funnel-item-header">
+                      <div className="funnel-item-num">{i + 1}</div>
+                      <span>Module {i + 1}</span>
+                    </div>
+                    <div className="funnel-module-row">
+                      <div className="funnel-img">
+                        {has
+                          ? <img src={`/api/preview-funnel-image/${draftId}/${key}`} alt="" loading="lazy" />
+                          : <div className="funnel-img-empty">{funnel.imageKeys.length === 0 ? 'images skipped' : 'No image'}</div>}
+                      </div>
+                      <div>
+                        <input type="text" value={m.title} onChange={e => setField(`modules.${i}.title`, e.target.value)} style={{ marginBottom: 6 }} />
+                        <textarea value={m.desc} onChange={e => setField(`modules.${i}.desc`, e.target.value)} style={{ minHeight: 60 }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </FunnelSection>
+
+            <FunnelSection id="pricing" num="8" title="Pricing Block">
+              <Field label="Pricing title" value={c.pricing.title} onChange={v => setField('pricing.title', v)} />
+              <Field label="Pricing description" value={c.pricing.desc} onChange={v => setField('pricing.desc', v)} multiline minHeight="60px" />
+              <div className="funnel-field-label">"What you get" bullets (4)</div>
+              {c.pricing.benefits.map((b, i) => (
+                <textarea key={i} value={b} onChange={e => setField(`pricing.benefits.${i}`, e.target.value)} style={{ marginBottom: 6, minHeight: 42 }} />
+              ))}
+              <Field label="Price (as displayed)" value={input.coursePrice} onChange={v => setInput('coursePrice', v)} />
+              <Field label="Featured testimonial quote" value={c.pricing.featured_quote} onChange={v => setField('pricing.featured_quote', v)} multiline minHeight="60px" />
+              <Field label="Featured testimonial name" value={c.pricing.featured_name} onChange={v => setField('pricing.featured_name', v)} />
+              <div className="funnel-field-label" style={{ marginTop: 12 }}>Laptop mockup</div>
+              <div className="funnel-img landscape">
+                {funnel.imageKeys.includes('pricing_laptop')
+                  ? <img src={`/api/preview-funnel-image/${draftId}/pricing_laptop`} alt="" loading="lazy" />
+                  : <div className="funnel-img-empty">{funnel.imageKeys.length === 0 ? 'images skipped' : 'No image'}</div>}
+              </div>
+            </FunnelSection>
+
+            <FunnelSection id="satisfaction" num="9" title="Satisfaction Guarantee" meta="pre-FAQ reassurance">
+              <Field label="Eyebrow" value={c.satisfaction.eyebrow} onChange={v => setField('satisfaction.eyebrow', v)} />
+              <Field label="Headline" value={c.satisfaction.headline} onChange={v => setField('satisfaction.headline', v)} />
+              <Field label="Body copy" value={c.satisfaction.body} onChange={v => setField('satisfaction.body', v)} multiline minHeight="70px" />
+            </FunnelSection>
+
+            <FunnelSection id="faq" num="10" title="FAQ + Footer" meta="3 Q&As · trademark">
+              {c.faq.map((f, i) => (
+                <div key={i} className="funnel-item-card">
+                  <div className="funnel-item-header">
+                    <div className="funnel-item-num">{i + 1}</div>
+                    <span>FAQ {i + 1}</span>
+                  </div>
+                  <input type="text" value={f.q} onChange={e => setField(`faq.${i}.q`, e.target.value)} style={{ marginBottom: 6 }} />
+                  <textarea value={f.a} onChange={e => setField(`faq.${i}.a`, e.target.value)} style={{ minHeight: 60 }} />
+                </div>
+              ))}
+              <Field label="Final CTA headline (above footer)" value={c.final_cta_headline} onChange={v => setField('final_cta_headline', v)} />
+              <Field label="Course trademark (footer)" value={c.course_trademark_name} onChange={v => setField('course_trademark_name', v)} />
+            </FunnelSection>
+          </>
+        )}
+
+        {step === 'checkout' && (
+          <FunnelSection id="checkout" num="✓" title="Checkout Page" meta='Step 2 · "Complete your order"'>
+            <div className="funnel-fixed-note" style={{ marginBottom: 12 }}>
+              ℹ︎ The right-side panel (laptop image, "what you get" bullets, price, featured testimonial) reuses content from the Pricing Block on the Sales Page step.
+            </div>
+            <Field label="Eyebrow" value={c.checkout.eyebrow} onChange={v => setField('checkout.eyebrow', v)} />
+            <Field label="Page headline" value={c.checkout.headline} onChange={v => setField('checkout.headline', v)} />
+            <Field label="Form headline (transformation H1)" value={c.checkout.form_title} onChange={v => setField('checkout.form_title', v)} />
+            <Field label="Form subtitle (1-sentence value prop)" value={c.checkout.form_subtitle} onChange={v => setField('checkout.form_subtitle', v)} multiline minHeight="60px" />
+          </FunnelSection>
+        )}
+
+        {step === 'confirmation' && (
+          <FunnelSection id="confirmation" num="✓" title="Confirmation Page" meta="Step 3 · post-purchase welcome">
+            <Field label="Top eyebrow" value={c.confirmation.eyebrow} onChange={v => setField('confirmation.eyebrow', v)} />
+            <Field label="Welcome headline" value={c.confirmation.headline} onChange={v => setField('confirmation.headline', v)} />
+            <hr style={{ border: 'none', borderTop: '1px dashed var(--border)', margin: '14px 0' }} />
+            <Field label="Next-steps eyebrow" value={c.confirmation.next_steps_eyebrow} onChange={v => setField('confirmation.next_steps_eyebrow', v)} />
+            <Field label="Next-steps headline" value={c.confirmation.next_steps_headline} onChange={v => setField('confirmation.next_steps_headline', v)} />
+            <Field label="Next-steps body" value={c.confirmation.next_steps_body} onChange={v => setField('confirmation.next_steps_body', v)} multiline minHeight="70px" />
+          </FunnelSection>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PushOverlay — phase checklist for funnel-only push
+// ============================================================
+function PushOverlay({ events, done, onClose, cvResult }) {
+  const allPhases = [
+    { key: 'auth',                  label: 'Authenticate with CC360' },
+    { key: 'funnel-photo',          label: 'Upload instructor photo' },
+    { key: 'funnel-images',         label: 'Upload funnel images' },
+    { key: 'funnel-customvalues',   label: 'Push funnel custom values' },
+  ];
+
+  function statusOf(phaseKey) {
+    let latest = null;
+    for (const e of events) {
+      if (e.phase === phaseKey) latest = e;
+    }
+    if (!latest) return 'pending';
+    if (latest.status === 'done') return 'done';
+    if (latest.status === 'failed' || latest.status === 'error') return 'failed';
+    return 'active';
+  }
+
+  let activeIdx = -1;
+  for (let i = 0; i < allPhases.length; i++) {
+    if (statusOf(allPhases[i].key) !== 'done') { activeIdx = i; break; }
+  }
+
+  const errEvent = events.find(e => e.phase === 'error');
+  const allDone = done && !errEvent;
+
+  return (
+    <div className="push-overlay">
+      <div className="push-card">
+        <div className="push-card-head">
+          <div className="push-card-title">
+            {allDone ? '✓ Funnel pushed' : errEvent ? '✗ Push failed' : 'Pushing funnel to CC360…'}
+          </div>
+        </div>
+        <div className="push-card-body">
+          {allPhases.map((p, i) => {
+            let s = statusOf(p.key);
+            if (s === 'pending' && i === activeIdx) s = 'active';
+            const event = events.filter(e => e.phase === p.key).pop();
+            let meta = null;
+            if (s === 'done') {
+              if (p.key === 'funnel-customvalues' && event) {
+                meta = `${event.updated || 0} updated${event.created ? ` · ${event.created} created` : ''}${event.failed ? ` · ${event.failed} failed` : ''}`;
+              } else if (p.key === 'funnel-images' && event) {
+                meta = event.skipped ? 'skipped' : `${event.uploaded || 0} uploaded${event.failed ? ` · ${event.failed} failed` : ''}`;
+              }
+            }
+            return (
+              <div key={p.key} className={`push-step ${s}`}>
+                <div className="push-step-icon">
+                  {s === 'done' && '✓'}
+                  {s === 'failed' && '✗'}
+                  {s === 'active' && '·'}
+                  {s === 'pending' && ''}
+                </div>
+                <div className="push-step-text">{p.label}</div>
+                {meta && <div className="push-step-meta">{meta}</div>}
+              </div>
+            );
+          })}
+          {errEvent && (
+            <div style={{ marginTop: 14, padding: 12, background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12 }}>
+              {errEvent.error}
+            </div>
+          )}
+          {allDone && cvResult?.failures?.length > 0 && (
+            <div style={{ marginTop: 14, padding: 12, background: '#fef3c7', color: '#78350f', border: '1px solid #fcd34d', borderRadius: 6, fontSize: 11, maxHeight: 200, overflowY: 'auto' }}>
+              <strong>{cvResult.failures.length} custom value(s) failed:</strong>
+              <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                {cvResult.failures.slice(0, 10).map((f, i) => (
+                  <li key={i}><code style={{ fontFamily: 'var(--mono)' }}>{f.name}</code>: {f.error}</li>
+                ))}
+                {cvResult.failures.length > 10 && <li>…and {cvResult.failures.length - 10} more</li>}
+              </ul>
+            </div>
+          )}
+        </div>
+        <div className="push-card-foot">
+          {allDone && (
+            <a className="btn btn-accent" href={`https://app.gohighlevel.com/v2/location/${events.find(e => e.phase === 'start')?.locationId}/settings/business-profile`} target="_blank" rel="noopener" style={{ textDecoration: 'none' }}>↗ Open sub-account</a>
+          )}
+          <button className="btn" onClick={onClose} disabled={!done}>
+            {done ? 'Close' : 'Working…'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

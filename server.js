@@ -28,6 +28,8 @@ import { store as tokenStore, backendName as tokenStoreBackend } from './lib/tok
 import { generateFunnelContent, flattenToCustomValueMap } from './lib/generate-funnel.js';
 import { generateFunnelImages } from './lib/generate-funnel-images.js';
 import { pushCustomValues, uploadFunnelImages, uploadInstructorPhoto } from './lib/funnel-push.js';
+import { loadSnapshotToLocation, waitForSnapshotPropagation } from './lib/snapshot-push.js';
+import { THEMES, DEFAULT_THEME, getTheme, isValidTheme } from './lib/funnel-themes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,7 +44,7 @@ const {
   GHL_CLIENT_ID,                              // OAuth: Sub-Account Marketplace App client ID
   GHL_CLIENT_SECRET,                          // OAuth: Sub-Account Marketplace App client secret
   GHL_OAUTH_REDIRECT_URI,                     // OAuth: e.g. https://your-app.onrender.com/oauth/callback
-  GHL_OAUTH_SCOPES = 'medias.readonly medias.write courses.readonly courses.write locations.readonly',
+  GHL_OAUTH_SCOPES = 'medias.readonly medias.write courses.readonly courses.write locations.readonly snapshots.readonly snapshots.write',
   PORT = 3000,
   REGEN_LIMIT = 3,                            // max regenerations per sub-account
 } = process.env;
@@ -182,6 +184,68 @@ async function mintAndSaveLocationToken(companyInstall, locationId) {
 
   console.log(`🎫 Minted location token for ${locationId} from company ${companyInstall.companyId}`);
   return mint.access_token;
+}
+
+// ---------------------------------------------------------------------
+// Resolve an AGENCY (company) token usable for agency-scoped APIs
+// like snapshots.{readonly,write}. Will pick the first company install
+// that covers the target sub-account, refresh it if expired, and
+// return its access token. Throws if no company install exists.
+// ---------------------------------------------------------------------
+async function resolveCompanyToken(locationId) {
+  if (!oauthConfigured) {
+    throw new Error('OAuth not configured — cannot get agency token (snapshot operations require OAuth).');
+  }
+  const all = await tokenStore.listInstallations();
+  const companies = all.filter(i => i.kind === 'company' && i.companyId);
+  if (companies.length === 0) {
+    throw new Error('No agency install found. Install the OAuth app at agency level (Distribution Type: Agency) and grant snapshots.write.');
+  }
+
+  // Prefer the company that owns the target location if we can tell;
+  // otherwise just use the first.
+  let chosen = companies[0];
+  if (locationId) {
+    const direct = await tokenStore.getInstallation(locationId);
+    if (direct?.companyId) {
+      const match = companies.find(c => c.companyId === direct.companyId);
+      if (match) chosen = match;
+    }
+  }
+
+  // Refresh if needed
+  const now = Date.now();
+  if (chosen.expiresAt && chosen.expiresAt < now + 60_000 && chosen.refreshToken) {
+    console.log(`🔄 Refreshing agency token for company ${chosen.companyId}...`);
+    const r = await refreshAccessToken({
+      refreshToken: chosen.refreshToken,
+      clientId: GHL_CLIENT_ID,
+      clientSecret: GHL_CLIENT_SECRET,
+      userType: 'Company',
+    });
+    await tokenStore.saveInstallation({
+      locationId: `company:${chosen.companyId}`,
+      companyId: chosen.companyId,
+      accessToken: r.access_token,
+      refreshToken: r.refresh_token || chosen.refreshToken,
+      expiresAt: Date.now() + ((r.expires_in || 86400) * 1000),
+      scopes: r.scope || chosen.scopes,
+      kind: 'company',
+    });
+    chosen = {
+      ...chosen,
+      accessToken: r.access_token,
+      refreshToken: r.refresh_token || chosen.refreshToken,
+      expiresAt: Date.now() + ((r.expires_in || 86400) * 1000),
+      scopes: r.scope || chosen.scopes,
+    };
+  }
+
+  return {
+    accessToken: chosen.accessToken,
+    companyId: chosen.companyId,
+    scopes: chosen.scopes,
+  };
 }
 
 // ---------------------------------------------------------------------
@@ -692,6 +756,20 @@ app.post('/api/regenerate/:draftId', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------
+// API: List available funnel themes (palette + snapshot id) for preview UI
+// ---------------------------------------------------------------------
+app.get('/api/themes', (_req, res) => {
+  // Don't leak snapshot IDs to the public preview — the backend resolves
+  // them server-side on push. Frontend only needs the palette and names.
+  const safe = Object.fromEntries(
+    Object.entries(THEMES).map(([key, t]) => [key, {
+      name: t.name, primary: t.primary, soft: t.soft, tint: t.tint, dark: t.dark,
+    }])
+  );
+  res.json({ themes: safe, default: DEFAULT_THEME });
+});
+
+// ---------------------------------------------------------------------
 // API: Save edits to a draft
 // ---------------------------------------------------------------------
 app.put('/api/draft/:draftId', (req, res) => {
@@ -699,7 +777,7 @@ app.put('/api/draft/:draftId', (req, res) => {
   const draft = drafts.get(draftId);
   if (!draft) return res.status(404).json({ error: 'Draft not found' });
 
-  const { structure, accent, funnelContent, brandPrimary, brandDarkBg, coursePrice } = req.body;
+  const { structure, accent, funnelContent, brandPrimary, brandDarkBg, coursePrice, theme } = req.body;
   if (structure) draft.structure = structure;
   if (accent) draft.input.accent = accent;
   // Funnel edits
@@ -707,6 +785,7 @@ app.put('/api/draft/:draftId', (req, res) => {
   if (brandPrimary && /^#[0-9a-fA-F]{6}$/.test(brandPrimary)) draft.input.brandPrimary = brandPrimary;
   if (brandDarkBg && /^#[0-9a-fA-F]{6}$/.test(brandDarkBg)) draft.input.brandDarkBg = brandDarkBg;
   if (typeof coursePrice === 'string') draft.input.coursePrice = coursePrice;
+  if (theme && isValidTheme(theme)) draft.input.theme = theme;
   drafts.set(draftId, draft);
   res.json({ ok: true });
 });
@@ -1107,6 +1186,15 @@ app.post('/api/push/:draftId', async (req, res) => {
         if (funnelImageUrls[k]) valueMap[`module_${i}_image_url`] = funnelImageUrls[k];
       }
       if (funnelImageUrls.pricing_laptop) valueMap.pricing_laptop_image = funnelImageUrls.pricing_laptop;
+      // Section background images (Option C — per-section AI-generated bgs)
+      if (funnelImageUrls.hero_bg)   valueMap.hero_bg_image   = funnelImageUrls.hero_bg;
+      if (funnelImageUrls.faq_bg)    valueMap.faq_bg_image    = funnelImageUrls.faq_bg;
+      if (funnelImageUrls.footer_bg) valueMap.footer_bg_image = funnelImageUrls.footer_bg;
+      // Inside-card icons (6 — for "What You Will Get in This Course")
+      for (let i = 1; i <= 6; i++) {
+        const k = `inside_card_${i}_icon`;
+        if (funnelImageUrls[k]) valueMap[`inside_card_${i}_icon_url`] = funnelImageUrls[k];
+      }
 
       emit({ phase: 'funnel-customvalues', status: 'start', total: Object.keys(valueMap).length });
       let cvResult;
@@ -1764,6 +1852,34 @@ app.post('/api/funnel-only/push/:draftId', async (req, res) => {
       return res.end();
     }
 
+    // ────────────────────────────────────────────────────────────────
+    // STEP A — Apply the chosen theme's snapshot to the sub-account.
+    // Uses the AGENCY token (snapshot operations are agency-scoped).
+    // If no theme was picked, default to Ocean.
+    // If snapshot import fails, we continue with customValues push
+    // anyway — the assumption is that the snapshot may have already
+    // been applied in a previous push.
+    // ────────────────────────────────────────────────────────────────
+    const themeKey = isValidTheme(draft.input.theme) ? draft.input.theme : DEFAULT_THEME;
+    const theme = getTheme(themeKey);
+    emit({ phase: 'theme-snapshot', status: 'start', theme: themeKey, snapshotId: theme.snapshotId });
+    try {
+      const agency = await resolveCompanyToken(locationId);
+      await loadSnapshotToLocation({
+        companyAccessToken: agency.accessToken,
+        companyId: agency.companyId,
+        snapshotId: theme.snapshotId,
+        locationId,
+      });
+      console.log(`   ✓ Snapshot ${theme.snapshotId} (${themeKey}) applied to ${locationId}`);
+      emit({ phase: 'theme-snapshot', status: 'propagating' });
+      await waitForSnapshotPropagation(8000);
+      emit({ phase: 'theme-snapshot', status: 'done', theme: themeKey });
+    } catch (e) {
+      console.warn(`   ⚠ Snapshot load failed (continuing with values push): ${e.message}`);
+      emit({ phase: 'theme-snapshot', status: 'failed', error: e.message, note: 'Continuing — snapshot may already be applied' });
+    }
+
     // Upload instructor photo
     let instructorPhotoUrl = null;
     if (draft.instructorPhoto?.buffer) {
@@ -1822,6 +1938,15 @@ app.post('/api/funnel-only/push/:draftId', async (req, res) => {
       if (funnelImageUrls[k]) valueMap[`module_${i}_image_url`] = funnelImageUrls[k];
     }
     if (funnelImageUrls.pricing_laptop) valueMap.pricing_laptop_image = funnelImageUrls.pricing_laptop;
+    // Section background images (Option C — per-section AI-generated bgs)
+    if (funnelImageUrls.hero_bg)   valueMap.hero_bg_image   = funnelImageUrls.hero_bg;
+    if (funnelImageUrls.faq_bg)    valueMap.faq_bg_image    = funnelImageUrls.faq_bg;
+    if (funnelImageUrls.footer_bg) valueMap.footer_bg_image = funnelImageUrls.footer_bg;
+    // Inside-card icons (6 — for "What You Will Get in This Course")
+    for (let i = 1; i <= 6; i++) {
+      const k = `inside_card_${i}_icon`;
+      if (funnelImageUrls[k]) valueMap[`inside_card_${i}_icon_url`] = funnelImageUrls[k];
+    }
 
     emit({ phase: 'funnel-customvalues', status: 'start', total: Object.keys(valueMap).length });
     let cvResult;

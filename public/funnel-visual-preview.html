@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CC360 Studio — Funnel Visual Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f5f5f0;
+    color: #0f172a;
+    overflow-x: hidden;
+  }
+  textarea, input { font-family: inherit; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ═══════════════════════════════════════════════════
+     APP HEADER (theme picker + controls)
+     ═══════════════════════════════════════════════════ */
+  .app-header {
+    position: sticky; top: 0; z-index: 100;
+    height: 64px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e5e0;
+    display: flex; align-items: center;
+    padding: 0 24px; gap: 24px;
+  }
+  .app-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 15px;
+  }
+  .app-brand-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--t-primary);
+    transition: background 200ms ease;
+  }
+
+  .theme-picker { display: flex; align-items: center; gap: 8px; }
+  .theme-picker-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #6b7280; font-weight: 600; margin-right: 6px;
+  }
+  .theme-swatch {
+    width: 32px; height: 32px; border-radius: 8px;
+    cursor: pointer; position: relative;
+    border: 2px solid transparent;
+    transition: transform 180ms ease, border-color 180ms ease;
+  }
+  .theme-swatch:hover { transform: translateY(-1px); }
+  .theme-swatch.active::after {
+    content: ''; position: absolute; inset: -5px;
+    border: 2px solid #0f172a; border-radius: 12px;
+  }
+  .theme-swatch-tooltip {
+    position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    padding: 4px 8px;
+    background: #0f172a; color: white;
+    font-size: 11px; border-radius: 4px;
+    white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: opacity 180ms ease; z-index: 10;
+  }
+  .theme-swatch:hover .theme-swatch-tooltip { opacity: 1; }
+
+  .header-spacer { flex: 1; }
+  .step-select {
+    border: 1px solid #d4d4d0; background: white;
+    border-radius: 6px; padding: 8px 12px;
+    font-size: 13px; font-weight: 500;
+  }
+  .header-btn {
+    border: 1px solid #d4d4d0; background: white;
+    border-radius: 6px; padding: 8px 16px;
+    font-size: 13px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all 150ms ease;
+  }
+  .header-btn:hover { border-color: var(--t-primary); color: var(--t-primary); }
+  .header-btn.primary {
+    background: var(--t-primary); color: white; border-color: var(--t-primary);
+  }
+  .header-btn.primary:hover { filter: brightness(0.92); color: white; }
+
+  /* ═══════════════════════════════════════════════════
+     EDITABLE TEXT
+     ═══════════════════════════════════════════════════ */
+  .ed {
+    background: transparent;
+    border: 1px dashed transparent;
+    border-radius: 4px;
+    padding: 1px 4px; margin: -1px -4px;
+    font-family: inherit; font-size: inherit; font-weight: inherit;
+    line-height: inherit; color: inherit;
+    width: 100%; resize: none; outline: none;
+    transition: border-color 180ms ease, background 180ms ease;
+    overflow: hidden;
+    text-align: inherit;
+  }
+  .ed:hover { border-color: rgba(99, 102, 241, 0.35); cursor: text; }
+  .ed:focus { border-color: var(--t-primary); background: rgba(255,255,255,0.6); }
+  .ed.on-dark:hover  { border-color: rgba(255,255,255,0.4); }
+  .ed.on-dark:focus  { background: rgba(0,0,0,0.18); }
+  .ed-inline {
+    display: inline-block; width: auto; min-width: 30px;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     STATIC + AI IMAGE PLACEHOLDERS
+     ═══════════════════════════════════════════════════ */
+  .img-slot {
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #e5e7eb, #f3f4f6);
+    color: #9ca3af; text-align: center;
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 0.04em;
+    border-radius: 8px; overflow: hidden;
+    padding: 12px;
+  }
+  .img-slot.ai {
+    background: linear-gradient(135deg, var(--t-primary-soft), var(--t-primary-tint));
+    color: var(--t-primary);
+  }
+  .img-slot-tag {
+    display: inline-block;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 3px;
+    margin-bottom: 6px;
+  }
+  .img-slot:not(.ai) .img-slot-tag {
+    background: rgba(0,0,0,0.06); color: #6b7280;
+  }
+  .img-slot.ai .img-slot-tag {
+    background: var(--t-primary); color: white;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     FUNNEL CANVAS
+     ═══════════════════════════════════════════════════ */
+  .funnel-canvas { background: white; }
+  .section {
+    position: relative;
+    padding: clamp(48px, 7vw, 88px) clamp(16px, 4vw, 32px);
+    overflow: hidden;
+  }
+  .section-inner {
+    max-width: 1140px; margin: 0 auto;
+    position: relative; z-index: 2;
+  }
+  .section.dark { color: white; background: var(--t-dark-bg); }
+  .section-bg-svg { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+
+  /* Typographic primitives */
+  .eyebrow {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--t-primary);
+    margin-bottom: 14px;
+  }
+  .eyebrow.center { text-align: center; }
+  .h1-display {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: clamp(32px, 4.5vw, 56px);
+    font-weight: 800; line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: #0f172a;
+    margin-bottom: 20px;
+  }
+  .section.dark .h1-display { color: white; }
+  .h2-display {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: clamp(28px, 3.5vw, 42px);
+    font-weight: 800; line-height: 1.12;
+    letter-spacing: -0.015em;
+    color: #0f172a;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .h2-display.left { text-align: left; }
+  .section.dark .h2-display { color: white; }
+  .body-lg {
+    font-size: 17px; line-height: 1.55;
+    color: #475569;
+    max-width: 680px;
+  }
+  .body-lg.center { margin-left: auto; margin-right: auto; text-align: center; }
+  .section.dark .body-lg { color: rgba(255,255,255,0.78); }
+
+  /* CTA Button */
+  .cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--t-primary);
+    color: white; font-weight: 600;
+    font-size: 15px;
+    padding: 14px 28px; border-radius: 8px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 8px 24px var(--t-primary-soft);
+    transition: transform 200ms ease, filter 200ms ease, box-shadow 200ms ease;
+  }
+  .cta:hover { transform: translateY(-2px); filter: brightness(1.06); }
+  .cta:active { transform: translateY(0); }
+  .cta.outlined {
+    background: transparent; color: var(--t-primary);
+    border: 2px solid var(--t-primary);
+    box-shadow: none;
+  }
+  .cta.outlined:hover { background: var(--t-primary-tint); }
+
+  /* ═══════════════════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════════════════ */
+  .hero-grid {
+    display: grid; grid-template-columns: 1.05fr 1fr;
+    gap: 64px; align-items: center;
+  }
+  @media (max-width: 880px) { .hero-grid { grid-template-columns: 1fr; gap: 32px; } }
+  .hero-email {
+    position: absolute; top: 32px; right: 32px;
+    font-size: 22px; color: var(--t-primary);
+    z-index: 3;
+  }
+  .hero-stars {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 18px;
+  }
+  .hero-stars-avatars { display: flex; }
+  .hero-stars-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+    border: 2px solid white;
+    margin-right: -10px;
+  }
+  .hero-stars-text strong { font-weight: 700; font-size: 16px; display: block; }
+  .hero-stars-text span { font-size: 13px; color: #64748b; }
+  .hero-video-caption {
+    text-align: center; margin-bottom: 12px;
+    font-size: 14px; font-weight: 600; color: #0f172a;
+  }
+  .hero-video {
+    aspect-ratio: 16/10;
+    background: #0f172a; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+    color: white; font-size: 48px;
+  }
+
+  /* AS SEEN ON */
+  .as-seen-row {
+    display: flex; align-items: center; gap: clamp(24px, 4vw, 56px);
+    flex-wrap: wrap; justify-content: center;
+    margin-top: 16px; padding-top: 16px;
+  }
+  .as-seen-label {
+    color: var(--t-primary); font-weight: 700;
+    font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase;
+  }
+  .as-seen-logo {
+    height: 28px; width: 100px;
+    background: linear-gradient(135deg, #d1d5db, #e5e7eb);
+    border-radius: 4px;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     PROBLEM (Pain + Solution)
+     ═══════════════════════════════════════════════════ */
+  .problem-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
+    margin-top: 40px; margin-bottom: 40px;
+  }
+  @media (max-width: 720px) { .problem-grid { grid-template-columns: 1fr; } }
+  .problem-card {
+    background: var(--t-primary-tint);
+    border: 1px solid var(--t-primary-soft);
+    border-radius: 14px;
+    padding: 32px 28px;
+  }
+  .problem-card-list { list-style: none; padding: 0; }
+  .problem-card-list li {
+    display: flex; gap: 14px; padding: 10px 0;
+    font-size: 15px; line-height: 1.5;
+    color: #1e293b;
+  }
+  .problem-card-list li::before {
+    content: ''; flex-shrink: 0;
+    width: 22px; height: 22px; border-radius: 50%;
+    margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: white;
+  }
+  .problem-card.pain li::before { content: '✕'; background: #dc2626; }
+  .problem-card.gain li::before { content: '✓'; background: var(--t-primary); }
+  .problem-cta-row { text-align: center; }
+
+  /* ═══════════════════════════════════════════════════
+     INSIDE CARDS (What You Will Get)
+     ═══════════════════════════════════════════════════ */
+  .inside-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 28px; margin-top: 56px;
+  }
+  @media (max-width: 880px) { .inside-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .inside-grid { grid-template-columns: 1fr; } }
+  .inside-card {
+    background: white;
+    border: 1px solid var(--t-primary-soft);
+    border-radius: 14px;
+    padding: 32px 24px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: transform 250ms ease, box-shadow 250ms ease, border-color 250ms ease;
+  }
+  .inside-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--t-primary);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  }
+  .inside-card-icon {
+    width: 72px; height: 72px; margin: 0 auto 22px;
+  }
+  .inside-card-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700; font-size: 18px;
+    margin-bottom: 12px; color: var(--t-primary);
+  }
+  .inside-card-desc { font-size: 14px; color: #64748b; line-height: 1.5; }
+
+  /* ═══════════════════════════════════════════════════
+     TESTIMONIALS
+     ═══════════════════════════════════════════════════ */
+  .testimonials-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;
+    margin-top: 56px;
+  }
+  @media (max-width: 880px) { .testimonials-grid { grid-template-columns: 1fr; } }
+  .testimonial-card {
+    background: white;
+    border-radius: 14px;
+    padding: 32px 28px 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    display: flex; flex-direction: column;
+    color: #0f172a;
+  }
+  .testimonial-avatar {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+    margin: 0 auto 18px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 24px; font-weight: 600;
+  }
+  .testimonial-quote {
+    font-size: 15px; line-height: 1.6;
+    color: #0f172a; margin-bottom: 18px;
+    font-style: italic;
+    text-align: center;
+  }
+  .testimonial-name {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700; font-size: 17px;
+    color: var(--t-primary);
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .testimonial-grid-img {
+    aspect-ratio: 4/3;
+    margin-top: auto;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     MODULES
+     ═══════════════════════════════════════════════════ */
+  .modules-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 22px; margin-top: 56px;
+  }
+  @media (max-width: 980px) { .modules-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .modules-grid { grid-template-columns: 1fr; } }
+  .module-card {
+    background: white;
+    border: 1px solid var(--t-primary-soft);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: transform 250ms ease, box-shadow 250ms ease;
+  }
+  .module-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+  }
+  .module-card-img { aspect-ratio: 1; }
+  .module-card-body { padding: 22px 18px; text-align: center; }
+  .module-card-title {
+    font-weight: 700; font-size: 15px;
+    margin-bottom: 8px; color: #0f172a;
+    line-height: 1.3;
+  }
+  .module-card-desc { font-size: 13px; color: #64748b; line-height: 1.5; }
+
+  /* ═══════════════════════════════════════════════════
+     PRICING
+     ═══════════════════════════════════════════════════ */
+  .pricing-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 56px;
+    align-items: center;
+  }
+  @media (max-width: 880px) { .pricing-grid { grid-template-columns: 1fr; gap: 32px; } }
+  .pricing-trustpilot {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #00b67a; color: white;
+    padding: 6px 12px; border-radius: 4px;
+    font-size: 13px; font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .pricing-trustpilot-stars { letter-spacing: 2px; }
+  .pricing-laptop { aspect-ratio: 4/3; margin-top: 24px; }
+  .pricing-card {
+    background: white;
+    border: 2px solid #0f172a;
+    border-radius: 14px;
+    padding: 36px;
+  }
+  .pricing-card-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 24px;
+    margin-bottom: 22px; color: #0f172a;
+  }
+  .pricing-benefits { list-style: none; padding: 0; margin-bottom: 24px; }
+  .pricing-benefits li {
+    display: flex; gap: 12px; padding: 8px 0;
+    font-size: 15px; color: #1e293b; line-height: 1.45;
+  }
+  .pricing-benefits li::before {
+    content: '✓'; flex-shrink: 0;
+    width: 22px; height: 22px;
+    background: var(--t-primary); color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    margin-top: 1px;
+  }
+  .pricing-today { font-size: 14px; color: #64748b; }
+  .pricing-amount {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 38px;
+    color: var(--t-primary);
+    margin: 6px 0 24px;
+  }
+  .featured-testimonial {
+    margin-top: 24px;
+    display: grid; grid-template-columns: 80px 1fr; gap: 16px;
+    align-items: start;
+  }
+  .featured-testimonial-img {
+    width: 80px; height: 80px; border-radius: 50%;
+  }
+  .featured-testimonial-body {
+    font-size: 14px; line-height: 1.5; color: #1e293b; font-style: italic;
+  }
+  .featured-testimonial-name {
+    font-weight: 700; color: #0f172a; font-style: normal;
+    display: block; margin-bottom: 6px;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     INSTRUCTOR (dark)
+     ═══════════════════════════════════════════════════ */
+  .instructor-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 64px; align-items: center;
+  }
+  @media (max-width: 880px) { .instructor-grid { grid-template-columns: 1fr; gap: 32px; } }
+  .instructor-photo { aspect-ratio: 1; border-radius: 16px; max-width: 460px; margin-left: auto; }
+  .instructor-name {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 42px;
+    color: white;
+    margin-bottom: 24px;
+  }
+  .instructor-bio p {
+    color: rgba(255,255,255,0.85);
+    font-size: 15px; line-height: 1.65;
+    margin-bottom: 14px;
+  }
+  .instructor-creds { list-style: none; padding: 0; margin-top: 22px; }
+  .instructor-creds li {
+    display: flex; gap: 12px; padding: 8px 0;
+    color: white; font-size: 14px; line-height: 1.5;
+  }
+  .instructor-creds li::before {
+    content: '✓'; flex-shrink: 0;
+    width: 20px; height: 20px;
+    background: var(--t-primary); color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    margin-top: 2px;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     AUDIENCE TAGS (Who is this for)
+     ═══════════════════════════════════════════════════ */
+  .audience-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    margin-top: 40px;
+  }
+  @media (max-width: 880px) { .audience-grid { grid-template-columns: repeat(2, 1fr); } }
+  .audience-tag {
+    background: var(--t-primary-tint);
+    border: 1px solid var(--t-primary-soft);
+    border-radius: 10px;
+    padding: 18px 18px;
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 12px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: #0f172a;
+    line-height: 1.25;
+  }
+  .audience-tag::before {
+    content: '✓'; flex-shrink: 0;
+    width: 18px; height: 18px;
+    background: var(--t-primary); color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     SATISFACTION
+     ═══════════════════════════════════════════════════ */
+  .satisfaction-inner { text-align: center; }
+  .satisfaction-shield {
+    width: 160px; height: 160px;
+    margin: 40px auto 0;
+    background:
+      radial-gradient(circle at 30% 30%, #fde68a 0%, transparent 50%),
+      conic-gradient(from 90deg, #b45309, #f59e0b, #fbbf24, #f59e0b, #b45309);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #451a03;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 18px;
+    text-align: center; line-height: 1.1;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  }
+
+  /* ═══════════════════════════════════════════════════
+     FAQ
+     ═══════════════════════════════════════════════════ */
+  .faq-list { max-width: 760px; margin: 48px auto 0; }
+  .faq-item {
+    background: white;
+    border: 1.5px solid var(--t-primary-soft);
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+    color: #0f172a;
+    transition: border-color 200ms ease;
+  }
+  .faq-item:hover { border-color: var(--t-primary); }
+  .faq-item-q { font-weight: 600; font-size: 15px; flex: 1; }
+  .faq-item-arrow {
+    color: var(--t-primary);
+    font-size: 16px;
+    transition: transform 200ms ease;
+    margin-left: 12px;
+  }
+  .faq-item.open .faq-item-arrow { transform: rotate(180deg); }
+  .faq-item-a {
+    padding: 0 24px 18px;
+    background: white;
+    border: 1.5px solid var(--t-primary-soft);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    margin-top: -18px; margin-bottom: 14px;
+    font-size: 14px; line-height: 1.6;
+    color: #475569;
+  }
+  .faq-final-cta {
+    text-align: center; margin-top: 48px;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     FOOTER BAR
+     ═══════════════════════════════════════════════════ */
+  .footer-bar {
+    padding: 24px;
+    text-align: center;
+    color: var(--t-primary);
+    font-size: 13px;
+    background: var(--t-dark-bg);
+  }
+
+  /* ═══════════════════════════════════════════════════
+     CHECKOUT page styles
+     ═══════════════════════════════════════════════════ */
+  .checkout-grid {
+    display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px;
+    align-items: start;
+  }
+  @media (max-width: 880px) { .checkout-grid { grid-template-columns: 1fr; gap: 32px; } }
+  .checkout-form-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 36px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .checkout-section-h {
+    font-weight: 700; font-size: 15px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f3f4f6;
+    color: #0f172a;
+  }
+  .checkout-line {
+    display: flex; justify-content: space-between;
+    padding: 12px 0;
+    font-size: 14px; color: #475569;
+    border-bottom: 1px dashed #f3f4f6;
+  }
+  .checkout-coupon {
+    display: flex; gap: 8px; margin: 16px 0;
+  }
+  .checkout-coupon input {
+    flex: 1; border: 1px solid #d1d5db; border-radius: 6px;
+    padding: 10px 12px; font-size: 14px;
+  }
+  .checkout-coupon button {
+    background: #0f172a; color: white; border: none;
+    border-radius: 6px; padding: 0 16px; font-weight: 600;
+  }
+  .checkout-secure {
+    text-align: center; font-size: 12px;
+    color: #6b7280; margin-top: 16px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     CONFIRMATION page styles
+     ═══════════════════════════════════════════════════ */
+  .confirm-check {
+    width: 140px; height: 140px;
+    margin: 40px auto;
+    background: #10b981;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    font-size: 72px; font-weight: 700;
+    box-shadow: 0 20px 40px rgba(16, 185, 129, 0.25);
+  }
+  .confirm-bar {
+    padding: 32px 24px;
+    background: var(--t-dark-bg);
+    position: relative; overflow: hidden;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     OVERLAYS — loading, push progress, toast
+     ═══════════════════════════════════════════════════ */
+  .standalone-badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 9px; border-radius: 999px;
+    background: #fef3c7; color: #92400e;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-left: 4px;
+  }
+  .loading-overlay {
+    position: fixed; inset: 64px 0 0 0;
+    background: rgba(245,245,240,0.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50;
+    color: #475569; font-weight: 500;
+    backdrop-filter: blur(4px);
+  }
+  .push-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15,23,42,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+    backdrop-filter: blur(4px);
+  }
+  .push-modal {
+    background: white; border-radius: 14px;
+    width: min(560px, 92vw); max-height: 80vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+  }
+  .push-modal-head {
+    padding: 18px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 15px;
+  }
+  .push-events {
+    padding: 16px 24px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .push-event {
+    padding: 8px 0;
+    border-bottom: 1px dashed #f3f4f6;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline;
+  }
+  .push-event-phase {
+    font-weight: 700; color: #0f172a;
+    min-width: 110px;
+  }
+  .push-event-status { color: var(--t-primary); font-weight: 600; }
+  .push-event-meta { color: #6b7280; }
+  .push-event-meta.error { color: #dc2626; font-weight: 600; }
+  .push-event-error { color: #dc2626; font-weight: 600; flex-basis: 100%; padding-left: 110px; }
+  .push-event-note { color: #92400e; font-style: italic; }
+  .push-event-pending::after { content: '...'; color: #94a3b8; }
+  .push-event-error.push-status-info .push-event-phase { color: #dc2626; }
+  .push-event-done .push-event-phase { color: #10b981; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #0f172a; color: white;
+    padding: 12px 20px; border-radius: 8px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    z-index: 300;
+  }
+  .toast.error { background: #dc2626; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ═══════════════════════════════════════════════════════
+// THEMES (5)
+// ═══════════════════════════════════════════════════════
+const THEMES = {
+  ocean:   { name: 'Ocean',   primary: '#2563eb', soft: '#bfdbfe', tint: '#eff6ff', dark: '#0a1c3d', lineDark: '#3b82f6', lineLight: '#bfdbfe' },
+  emerald: { name: 'Emerald', primary: '#10b981', soft: '#a7f3d0', tint: '#ecfdf5', dark: '#022c22', lineDark: '#10b981', lineLight: '#a7f3d0' },
+  amber:   { name: 'Amber',   primary: '#f59e0b', soft: '#fde68a', tint: '#fffbeb', dark: '#451a03', lineDark: '#f59e0b', lineLight: '#fde68a' },
+  rose:    { name: 'Rose',    primary: '#f43f5e', soft: '#fecdd3', tint: '#fff1f2', dark: '#4c0519', lineDark: '#f43f5e', lineLight: '#fecdd3' },
+  slate:   { name: 'Slate',   primary: '#475569', soft: '#cbd5e1', tint: '#f1f5f9', dark: '#0f172a', lineDark: '#64748b', lineLight: '#cbd5e1' },
+};
+
+// ═══════════════════════════════════════════════════════
+// MOCK CONTENT (matches CC360 custom_value keys 1:1)
+// Use generic-but-realistic AI course content as defaults.
+// ═══════════════════════════════════════════════════════
+const MOCK = {
+  course_name: 'Become an AI Expert',
+  trademark:   'Being an AI Expert from Scratch™',
+  year:        '2026',
+  price:       '$497 one time',
+  // Hero
+  hero_eyebrow:    'MASTER AI SKILLS FROM ZERO TO EXPERT FAST',
+  hero_headline:   'Become an AI Expert from Scratch — Transform Your Career and Skills Today',
+  hero_subheadline:'A practical, beginner-friendly course that takes you from "what is AI?" to confidently building real models.',
+  hero_cta:        'Get instant access here!',
+  hero_star_text:  'Thousands of learners worldwide trust this course',
+  // Problem
+  problem_eyebrow: 'STRUGGLING TO START IN AI? GET CLEAR GUIDANCE AND SKILLS',
+  problem_headline:'Does this sound like you?',
+  pains: [
+    'Feeling overwhelmed by AI jargon and complex theories.',
+    'Not knowing where to begin learning AI fundamentals.',
+    'Lacking practical experience with AI tools and projects.',
+    'Worried about falling behind in the fast-moving AI field.',
+    'Uncertain how to apply AI skills to real-world problems.',
+  ],
+  solutions: [
+    'Simplified explanations that break down AI concepts clearly.',
+    'Step-by-step roadmap to build your AI foundation confidently.',
+    'Hands-on projects that teach practical AI applications.',
+    'Strategies to keep you current in evolving AI technologies.',
+    'Learn to maintain your results for life.',
+  ],
+  // Inside cards
+  included_header: 'What You Will Get in This Course',
+  inside_cards: [
+    { title: 'AI Fundamentals Explained',    desc: 'Understand core AI concepts with clear, beginner-friendly lessons.' },
+    { title: 'Hands-On Projects',            desc: 'Build real AI models and applications through guided exercises.' },
+    { title: 'Tool Mastery',                 desc: 'Learn to use popular AI frameworks and tools effectively.' },
+    { title: 'Career Guidance',              desc: 'Get tips for applying AI skills in job interviews and roles.' },
+    { title: 'Continuous Updates',           desc: 'Access ongoing course updates reflecting the latest AI trends.' },
+    { title: 'Community Support',            desc: 'Join a network of learners to share insights and get help.' },
+  ],
+  // Testimonials (NAMES are static template defaults — not AI generated)
+  testimonials: [
+    { quote: "I started with zero knowledge, and Ray's course made AI simple and practical. Now I'm confidently working on my own AI projects." },
+    { quote: "The step-by-step approach helped me understand complex AI topics without feeling lost. It's exactly what I needed to switch careers." },
+    { quote: "Thanks to this course, I landed a junior AI role and continue to grow my skills every day. The hands-on projects were invaluable." },
+  ],
+  testimonial_names_static: ['- Jane Doe', '- John Doe', '- Bob Doe'],
+  // Modules
+  modules_eyebrow:  'MODULES',
+  modules_headline: 'FOLLOW MY STEP BY STEP VIDEO TRAINING',
+  modules: [
+    { title: 'Week 1 — Introduction to AI Concepts',        desc: 'Learn what AI is, its history, and key terms to build a strong foundation.' },
+    { title: 'Week 2 — Machine Learning Basics',            desc: 'Explore supervised and unsupervised learning techniques with simple examples.' },
+    { title: 'Week 3 — Deep Learning Fundamentals',         desc: 'Understand neural networks and how deep learning powers modern AI.' },
+    { title: 'Week 4 — Practical AI Tools',                 desc: 'Get hands-on with Python libraries and frameworks like TensorFlow and scikit-learn.' },
+    { title: 'Week 5 — Real-World AI Projects',             desc: 'Apply your skills by building projects such as image recognition and chatbots.' },
+    { title: 'Bonus — AI Ethics and Future Trends',         desc: 'Learn about ethical considerations and where AI is heading next.' },
+    { title: 'Bonus — Career Strategies for AI Roles',      desc: 'Discover how to position yourself for AI jobs and prepare for interviews.' },
+    { title: 'Bonus — Resources and Continued Learning',    desc: 'Access curated resources to keep advancing your AI expertise after the course.' },
+  ],
+  // Pricing
+  pricing_title:    'Being an AI Expert from Scratch — Your Path to AI Mastery',
+  pricing_desc:     'Invest in your future by gaining the skills needed to become a confident AI professional. This course guides you from beginner to capable practitioner.',
+  pricing_benefits: [
+    'Lifetime access to comprehensive AI training content and updates.',
+    'Step-by-step projects that build real-world AI experience.',
+    'Direct instructor support and community engagement.',
+    'Career advice tailored to AI job market demands.',
+  ],
+  pricing_today_label: 'Today Just',
+  pricing_card_title:  "Here's what you get:",
+  pricing_cta:         'Get instant access',
+  // Featured testimonial (static name in each themed template)
+  featured_quote: "This course gave me the clarity and confidence to start my AI career. The practical lessons made all the difference.",
+  featured_name:  "Ethan M.",
+  // Instructor
+  instructor_eyebrow: 'ABOUT YOUR INSTRUCTOR',
+  instructor_name:    'Meet Ray',
+  instructor_bio_1: "I'm Ray, an AI specialist with over 8 years of experience in machine learning and data science. I've helped hundreds of students master AI fundamentals and launch their careers.",
+  instructor_bio_2: "I created this course to provide clear, accessible AI training for beginners who want practical skills without confusion. My goal is to make AI learning straightforward and actionable.",
+  instructor_bio_3: "Graduates typically gain confidence to build AI projects and secure roles in AI-related fields quickly.",
+  instructor_credentials: [
+    'Taught AI concepts to over 2,000 students worldwide.',
+    'Developed AI solutions for Fortune 500 companies.',
+    'Published research in top AI and machine learning journals.',
+    'Led workshops at major tech conferences globally.',
+    'Mentored dozens of successful AI career switchers.',
+    'Created online AI content with 100,000+ views.',
+  ],
+  // Audience
+  audience_eyebrow:  'WHO IS THIS FOR...',
+  audience_headline: 'This course is perfect for beginners eager to build AI skills and advance their tech careers with real knowledge and practice.',
+  audience_tags: [
+    'Aspiring AI Professionals', 'Career Changers', 'Tech Enthusiasts', 'Recent Graduates',
+    'Self-Taught Programmers', 'Data Science Beginners', 'Software Developers', 'Entrepreneurs Exploring AI',
+  ],
+  // Satisfaction
+  satisfaction_headline: 'Satisfaction Guaranteed',
+  satisfaction_body:     "Try the course risk-free with our 30-day refund policy. We're confident you'll gain valuable AI skills that transform your career.",
+  // FAQ
+  faq_eyebrow:  'STILL GOT QUESTIONS?',
+  faq_headline: 'Frequently Asked Questions',
+  faq: [
+    { q: 'Do I need prior AI experience to join?',
+      a: 'No prior experience is needed. This course starts with the basics and builds up practical skills step-by-step.' },
+    { q: 'How long do I have access to the course?',
+      a: 'You get lifetime access including all future updates and bonus content without additional fees.' },
+    { q: 'Is there any support if I get stuck?',
+      a: 'Yes, you can ask questions in the course community and receive guidance from Ray and fellow learners.' },
+  ],
+  // Final CTA
+  final_cta_headline: 'Enroll in the course now!',
+  final_cta_btn:      'Get instant access here!',
+  // Checkout
+  checkout_eyebrow:    'CHECKOUT FORM',
+  checkout_headline:   'Complete your order',
+  checkout_subhead:    'Become a Confident AI Expert',
+  checkout_desc:       'Get full access to all lessons, projects, and support to master AI from scratch.',
+  checkout_sat_eyebrow:'STILL NOT SURE?',
+  checkout_sat_headline: 'Satisfaction guarantee',
+  checkout_sat_body:   "We want you to find value in our trainings! We offer full refunds within 30 days. With all of our valuable video training, we are confident you WILL love it!",
+  // Confirmation
+  confirm_eyebrow:  "SUCCESS! YOU'RE IN!",
+  confirm_headline: "You're enrolled in Being an AI Expert from Scratch!",
+  confirm_next_eyebrow: "HERE'S YOUR NEXT STEPS",
+  confirm_next_headline: 'Check your email!',
+  confirm_next_body: 'Look for your login details and course access instructions arriving shortly. Start your AI journey immediately.',
+};
+
+// ═══════════════════════════════════════════════════════
+// Helper components
+// ═══════════════════════════════════════════════════════
+function E({ value, onChange, multi = false, className = '', onDark = false, placeholder = '', inline = false }) {
+  const Tag = multi ? 'textarea' : 'input';
+  const ref = useRef(null);
+  useEffect(() => {
+    if (multi && ref.current) {
+      ref.current.style.height = 'auto';
+      ref.current.style.height = ref.current.scrollHeight + 'px';
+    }
+  }, [value, multi]);
+  return (
+    <Tag
+      ref={ref}
+      className={`ed ${className} ${onDark ? 'on-dark' : ''} ${inline ? 'ed-inline' : ''}`}
+      value={value || ''}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={multi ? 1 : undefined}
+    />
+  );
+}
+
+function BgSvg({ light, lineColor }) {
+  return (
+    <svg className="section-bg-svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice"
+         xmlns="http://www.w3.org/2000/svg">
+      <path d="M 1380 -50 C 1620 100, 1820 220, 1740 420 S 1900 660, 1700 830 S 1880 1080, 1700 1140"
+            fill="none" stroke={lineColor}
+            strokeWidth={light ? 3.5 : 4} strokeLinecap="round"
+            opacity={light ? 0.5 : 0.6}/>
+      <path d="M 340 1130 C 100 980, 280 800, 180 600 S 80 360, 240 200 S 100 0, 280 -60"
+            fill="none" stroke={lineColor}
+            strokeWidth={light ? 3.5 : 4} strokeLinecap="round"
+            opacity={light ? 0.5 : 0.6}/>
+    </svg>
+  );
+}
+
+function ImgSlot({ ai = false, label, style }) {
+  return (
+    <div className={`img-slot ${ai ? 'ai' : ''}`} style={style}>
+      <div>
+        <span className="img-slot-tag">{ai ? 'AI Generated' : 'Static'}</span>
+        <div>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN APP — wired to backend draft + push APIs
+// ═══════════════════════════════════════════════════════
+function App() {
+  // Draft identifier comes from ?draft=<id> in URL, or null in standalone-preview mode
+  const draftId = new URLSearchParams(window.location.search).get('draft');
+
+  const [themeKey, setThemeKey] = useState('ocean');
+  const [content, setContent]   = useState(MOCK);
+  const [step, setStep]         = useState('sales');
+  const [openFaq, setOpenFaq]   = useState(null);
+  const [loading, setLoading]   = useState(!!draftId);
+  const [toast, setToast]       = useState(null);
+  const [pushEvents, setPushEvents] = useState([]);
+  const [pushOpen, setPushOpen] = useState(false);
+  const [pushDone, setPushDone] = useState(false);
+  const [pushing, setPushing]   = useState(false);
+  const saveTimer = useRef(null);
+
+  const theme = THEMES[themeKey];
+
+  // ── Load draft (skip in standalone-preview mode) ──
+  useEffect(() => {
+    if (!draftId) return;
+    setLoading(true);
+    fetch(`/api/draft/${draftId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { showToast(data.error, true); return; }
+        if (!data.funnel?.generated) { showToast('No funnel content in this draft', true); return; }
+        // Hydrate state from server-side draft
+        if (data.funnel.content) setContent(prev => ({ ...prev, ...data.funnel.content }));
+        if (data.funnel.input?.theme && THEMES[data.funnel.input.theme]) {
+          setThemeKey(data.funnel.input.theme);
+        }
+      })
+      .catch(e => showToast(e.message, true))
+      .finally(() => setLoading(false));
+  }, [draftId]);
+
+  // ── Debounced auto-save (only when wired to a real draft) ──
+  useEffect(() => {
+    if (!draftId || loading) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      fetch(`/api/draft/${draftId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          funnelContent: content,
+          theme: themeKey,
+        }),
+      }).catch(() => {});
+    }, 700);
+  }, [content, themeKey, draftId, loading]);
+
+  function showToast(msg, isError = false) {
+    setToast({ msg, isError });
+    setTimeout(() => setToast(null), 3500);
+  }
+
+  const cssVars = {
+    '--t-primary':      theme.primary,
+    '--t-primary-soft': theme.soft,
+    '--t-primary-tint': theme.tint,
+    '--t-dark-bg':      theme.dark,
+  };
+
+  const setField = (path, value) => {
+    setContent(prev => {
+      const next = structuredClone(prev);
+      const parts = path.split('.');
+      let cur = next;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const k = parts[i];
+        if (cur[k] === undefined) cur[k] = /^\d+$/.test(parts[i+1]) ? [] : {};
+        cur = cur[k];
+      }
+      cur[parts[parts.length - 1]] = value;
+      return next;
+    });
+  };
+
+  async function pushToCC360() {
+    if (!draftId) {
+      showToast('Standalone preview — connect to a draft to push.', true);
+      return;
+    }
+    if (!confirm(`Apply the ${theme.name} theme template and push content to CC360?`)) return;
+    setPushEvents([]);
+    setPushOpen(true);
+    setPushDone(false);
+    setPushing(true);
+    try {
+      const res = await fetch(`/api/funnel-only/push/${draftId}`, { method: 'POST' });
+      if (!res.ok && !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Push failed (HTTP ${res.status})`);
+      }
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const ev = JSON.parse(line);
+            setPushEvents(prev => [...prev, ev]);
+            if (ev.phase === 'done' || ev.phase === 'error') setPushDone(true);
+          } catch {}
+        }
+      }
+      setPushDone(true);
+    } catch (e) {
+      setPushEvents(prev => [...prev, { phase: 'error', error: e.message }]);
+      setPushDone(true);
+    } finally {
+      setPushing(false);
+    }
+  }
+
+  return (
+    <div style={cssVars}>
+      <header className="app-header">
+        <div className="app-brand">
+          <span className="app-brand-dot"></span>
+          <span>CC360 Studio</span>
+          {!draftId && <span className="standalone-badge">Standalone Preview</span>}
+        </div>
+
+        <div className="theme-picker">
+          <span className="theme-picker-label">Theme</span>
+          {Object.entries(THEMES).map(([key, t]) => (
+            <div key={key}
+              className={`theme-swatch ${themeKey === key ? 'active' : ''}`}
+              style={{ background: t.primary }}
+              onClick={() => setThemeKey(key)}>
+              <span className="theme-swatch-tooltip">{t.name}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="header-spacer"></div>
+
+        <select className="step-select" value={step} onChange={e => setStep(e.target.value)}>
+          <option value="sales">Sales Page</option>
+          <option value="checkout">Checkout</option>
+          <option value="confirmation">Confirmation</option>
+        </select>
+
+        <button className="header-btn primary" onClick={pushToCC360} disabled={pushing}>
+          {pushing ? 'Pushing…' : 'Push to CC360'}
+        </button>
+      </header>
+
+      {loading && (
+        <div className="loading-overlay">
+          <div>Loading draft…</div>
+        </div>
+      )}
+
+      <div className="funnel-canvas">
+        {step === 'sales' && (
+          <SalesPage c={content} setField={setField} theme={theme} openFaq={openFaq} setOpenFaq={setOpenFaq}/>
+        )}
+        {step === 'checkout' && (
+          <CheckoutPage c={content} setField={setField} theme={theme} openFaq={openFaq} setOpenFaq={setOpenFaq}/>
+        )}
+        {step === 'confirmation' && (
+          <ConfirmationPage c={content} setField={setField} theme={theme}/>
+        )}
+      </div>
+
+      {pushOpen && (
+        <PushOverlay
+          events={pushEvents}
+          done={pushDone}
+          theme={theme}
+          onClose={() => setPushOpen(false)}
+        />
+      )}
+
+      {toast && (
+        <div className={`toast ${toast.isError ? 'error' : ''}`}>{toast.msg}</div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// PUSH PROGRESS OVERLAY
+// Streams NDJSON events from /api/funnel-only/push and shows phase-by-phase.
+// ═══════════════════════════════════════════════════════
+function PushOverlay({ events, done, theme, onClose }) {
+  return (
+    <div className="push-overlay">
+      <div className="push-modal">
+        <div className="push-modal-head">
+          <strong>Pushing to CC360</strong>
+          {done && <button className="header-btn" onClick={onClose}>Close</button>}
+        </div>
+        <div className="push-events">
+          {events.map((e, i) => (
+            <div key={i} className={`push-event push-event-${e.phase} push-status-${e.status || 'info'}`}>
+              <span className="push-event-phase">{labelPhase(e.phase)}</span>
+              {e.status && <span className="push-event-status">{e.status}</span>}
+              {e.theme && <span className="push-event-meta">theme={e.theme}</span>}
+              {e.source && <span className="push-event-meta">auth={e.source}</span>}
+              {typeof e.uploaded === 'number' && <span className="push-event-meta">uploaded={e.uploaded}</span>}
+              {typeof e.updated === 'number' && <span className="push-event-meta">updated={e.updated}</span>}
+              {typeof e.created === 'number' && <span className="push-event-meta">created={e.created}</span>}
+              {typeof e.failed === 'number' && e.failed > 0 && <span className="push-event-meta error">failed={e.failed}</span>}
+              {e.error && <span className="push-event-error">{e.error}</span>}
+              {e.note && <span className="push-event-note">{e.note}</span>}
+            </div>
+          ))}
+          {!done && <div className="push-event push-event-pending">…</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function labelPhase(phase) {
+  const map = {
+    start: 'Start',
+    auth: 'Auth',
+    'theme-snapshot': 'Theme Snapshot',
+    'funnel-photo': 'Instructor Photo',
+    'funnel-images': 'Funnel Images',
+    'funnel-customvalues': 'Content Values',
+    done: 'Done',
+    error: 'Error',
+  };
+  return map[phase] || phase;
+}
+
+// ═══════════════════════════════════════════════════════
+// SALES PAGE
+// ═══════════════════════════════════════════════════════
+function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
+  return (
+    <>
+      {/* HERO */}
+      <section className="section">
+        <BgSvg light lineColor={theme.lineLight}/>
+        <div className="hero-email">✉</div>
+        <div className="section-inner">
+          <div className="hero-grid">
+            <div>
+              <div className="eyebrow">
+                <E value={c.hero_eyebrow} onChange={v => setField('hero_eyebrow', v)} />
+              </div>
+              <h1 className="h1-display">
+                <E multi value={c.hero_headline} onChange={v => setField('hero_headline', v)} />
+              </h1>
+              <p className="body-lg">
+                <E multi value={c.hero_subheadline} onChange={v => setField('hero_subheadline', v)} />
+              </p>
+              <div style={{marginTop: 28}}>
+                <button className="cta">
+                  <E inline value={c.hero_cta} onChange={v => setField('hero_cta', v)} />
+                </button>
+              </div>
+              <div className="hero-stars">
+                <div className="hero-stars-avatars">
+                  <div className="hero-stars-avatar"></div>
+                  <div className="hero-stars-avatar"></div>
+                  <div className="hero-stars-avatar"></div>
+                </div>
+                <div className="hero-stars-text">
+                  <strong>4.9 / 5 star reviews</strong>
+                  <span><E value={c.hero_star_text} onChange={v => setField('hero_star_text', v)}/></span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="hero-video-caption">🔊 CLICK BELOW TO WATCH FIRST!</div>
+              <div className="hero-video">▶</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AS SEEN ON */}
+      <section className="section" style={{paddingTop: 24, paddingBottom: 24}}>
+        <div className="section-inner">
+          <div className="as-seen-row">
+            <div className="as-seen-label">AS SEEN ON</div>
+            <div className="as-seen-logo"/>
+            <div className="as-seen-logo"/>
+            <div className="as-seen-logo"/>
+            <div className="as-seen-logo"/>
+            <div className="as-seen-logo"/>
+          </div>
+        </div>
+      </section>
+
+      {/* PROBLEM */}
+      <section className="section" style={{background: '#fafafa'}}>
+        <div className="section-inner">
+          <div className="eyebrow center">
+            <E value={c.problem_eyebrow} onChange={v=>setField('problem_eyebrow',v)} className="center"/>
+          </div>
+          <h2 className="h2-display">
+            <E value={c.problem_headline} onChange={v=>setField('problem_headline',v)} className="center"/>
+          </h2>
+          <div className="problem-grid">
+            <div className="problem-card pain">
+              <ul className="problem-card-list">
+                {c.pains.map((p,i) => (
+                  <li key={i}><E multi value={p} onChange={v=>setField(`pains.${i}`, v)}/></li>
+                ))}
+              </ul>
+            </div>
+            <div className="problem-card gain">
+              <ul className="problem-card-list">
+                {c.solutions.map((s,i) => (
+                  <li key={i}><E multi value={s} onChange={v=>setField(`solutions.${i}`, v)}/></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="problem-cta-row">
+            <button className="cta">
+              <E inline value={c.hero_cta} onChange={v => setField('hero_cta', v)} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* INSIDE CARDS */}
+      <section className="section">
+        <div className="section-inner">
+          <h2 className="h2-display">
+            <E value={c.included_header} onChange={v=>setField('included_header',v)} className="center"/>
+          </h2>
+          <div className="inside-grid">
+            {c.inside_cards.map((card, i) => (
+              <div key={i} className="inside-card">
+                <ImgSlot ai label={`Card ${i+1} icon`} style={{width:72,height:72,margin:'0 auto 22px',borderRadius:'50%'}}/>
+                <div className="inside-card-title">
+                  <E value={card.title} onChange={v=>setField(`inside_cards.${i}.title`, v)} className="center"/>
+                </div>
+                <div className="inside-card-desc">
+                  <E multi value={card.desc} onChange={v=>setField(`inside_cards.${i}.desc`, v)} className="center"/>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIALS — DARK */}
+      <section className="section dark">
+        <BgSvg lineColor={theme.lineDark}/>
+        <div className="section-inner">
+          <div className="eyebrow center" style={{color: theme.primary}}>TESTIMONIALS</div>
+          <h2 className="h2-display">What our students are saying…</h2>
+          <div className="testimonials-grid">
+            {c.testimonials.map((t,i) => (
+              <div key={i} className="testimonial-card">
+                <ImgSlot label="Avatar (static)" style={{width:64,height:64,borderRadius:'50%',margin:'0 auto 18px'}}/>
+                <div className="testimonial-quote">
+                  "<E multi value={t.quote} onChange={v=>setField(`testimonials.${i}.quote`, v)}/>"
+                </div>
+                <div className="testimonial-name">{c.testimonial_names_static[i]}</div>
+                <ImgSlot label={`Success grid ${i+1} (static)`} style={{aspectRatio:'4/3'}}/>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* MODULES */}
+      <section className="section">
+        <div className="section-inner">
+          <div className="eyebrow center">
+            <E value={c.modules_eyebrow} onChange={v=>setField('modules_eyebrow',v)} className="center"/>
+          </div>
+          <h2 className="h2-display">
+            <E value={c.modules_headline} onChange={v=>setField('modules_headline',v)} className="center"/>
+          </h2>
+          <div className="modules-grid">
+            {c.modules.map((m,i) => (
+              <div key={i} className="module-card">
+                <ImgSlot ai label={`Module ${i+1} image`} style={{aspectRatio:1}}/>
+                <div className="module-card-body">
+                  <div className="module-card-title">
+                    <E value={m.title} onChange={v=>setField(`modules.${i}.title`, v)} className="center"/>
+                  </div>
+                  <div className="module-card-desc">
+                    <E multi value={m.desc} onChange={v=>setField(`modules.${i}.desc`, v)} className="center"/>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section className="section" style={{background:'#fafafa'}}>
+        <div className="section-inner">
+          <div className="pricing-grid">
+            <div>
+              <div className="pricing-trustpilot">
+                <span className="pricing-trustpilot-stars">★★★★★</span>
+                <span>4.9/5 star reviews</span>
+              </div>
+              <h2 className="h2-display left">
+                <E multi value={c.pricing_title} onChange={v=>setField('pricing_title',v)}/>
+              </h2>
+              <p className="body-lg">
+                <E multi value={c.pricing_desc} onChange={v=>setField('pricing_desc',v)}/>
+              </p>
+              <ImgSlot ai label="Laptop mockup" style={{aspectRatio:'4/3', marginTop:32}}/>
+            </div>
+            <div className="pricing-card">
+              <div className="pricing-card-title">
+                <E value={c.pricing_card_title} onChange={v=>setField('pricing_card_title',v)}/>
+              </div>
+              <ul className="pricing-benefits">
+                {c.pricing_benefits.map((b,i) => (
+                  <li key={i}><E multi value={b} onChange={v=>setField(`pricing_benefits.${i}`, v)}/></li>
+                ))}
+              </ul>
+              <div className="pricing-today">
+                <E value={c.pricing_today_label} onChange={v=>setField('pricing_today_label',v)}/>
+              </div>
+              <div className="pricing-amount">
+                <E value={c.price} onChange={v=>setField('price',v)}/>
+              </div>
+              <button className="cta" style={{width:'100%', justifyContent:'center'}}>
+                <E inline value={c.pricing_cta} onChange={v=>setField('pricing_cta',v)}/>
+              </button>
+              <div className="featured-testimonial">
+                <ImgSlot label="Wall img (static)" style={{width:80,height:80,borderRadius:'50%'}}/>
+                <div>
+                  <span className="featured-testimonial-name">
+                    <E value={c.featured_name} onChange={v=>setField('featured_name',v)}/>
+                  </span>
+                  <div className="featured-testimonial-body">
+                    "<E multi value={c.featured_quote} onChange={v=>setField('featured_quote',v)}/>"
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* INSTRUCTOR — DARK */}
+      <section className="section dark">
+        <BgSvg lineColor={theme.lineDark}/>
+        <div className="section-inner">
+          <div className="instructor-grid">
+            <div>
+              <div className="eyebrow">
+                <E onDark value={c.instructor_eyebrow} onChange={v=>setField('instructor_eyebrow',v)}/>
+              </div>
+              <h2 className="instructor-name">
+                <E onDark value={c.instructor_name} onChange={v=>setField('instructor_name',v)}/>
+              </h2>
+              <div className="instructor-bio">
+                <p><E onDark multi value={c.instructor_bio_1} onChange={v=>setField('instructor_bio_1',v)}/></p>
+                <p><E onDark multi value={c.instructor_bio_2} onChange={v=>setField('instructor_bio_2',v)}/></p>
+                <p><E onDark multi value={c.instructor_bio_3} onChange={v=>setField('instructor_bio_3',v)}/></p>
+              </div>
+              <ul className="instructor-creds">
+                {c.instructor_credentials.map((cr,i) => (
+                  <li key={i}><E onDark multi value={cr} onChange={v=>setField(`instructor_credentials.${i}`, v)}/></li>
+                ))}
+              </ul>
+            </div>
+            <ImgSlot label="Instructor photo (static)" style={{aspectRatio:1,borderRadius:16,maxWidth:460,marginLeft:'auto'}}/>
+          </div>
+        </div>
+      </section>
+
+      {/* AUDIENCE */}
+      <section className="section">
+        <div className="section-inner">
+          <div className="eyebrow center">
+            <E value={c.audience_eyebrow} onChange={v=>setField('audience_eyebrow',v)} className="center"/>
+          </div>
+          <h2 className="h2-display">
+            <E multi value={c.audience_headline} onChange={v=>setField('audience_headline',v)} className="center"/>
+          </h2>
+          <div className="audience-grid">
+            {c.audience_tags.map((t,i) => (
+              <div key={i} className="audience-tag">
+                <E value={t} onChange={v=>setField(`audience_tags.${i}`, v)}/>
+              </div>
+            ))}
+          </div>
+          <div style={{textAlign:'center', marginTop:48}}>
+            <button className="cta outlined">
+              <E inline value={c.hero_cta} onChange={v => setField('hero_cta', v)} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* SATISFACTION */}
+      <section className="section">
+        <div className="section-inner satisfaction-inner">
+          <h2 className="h2-display">
+            <E value={c.satisfaction_headline} onChange={v=>setField('satisfaction_headline',v)} className="center"/>
+          </h2>
+          <p className="body-lg center">
+            <E multi value={c.satisfaction_body} onChange={v=>setField('satisfaction_body',v)} className="center"/>
+          </p>
+          <div className="satisfaction-shield">100%<br/>SATISFACTION<br/>GUARANTEED</div>
+        </div>
+      </section>
+
+      {/* FAQ + FINAL CTA — DARK */}
+      <section className="section dark">
+        <BgSvg lineColor={theme.lineDark}/>
+        <div className="section-inner">
+          <div className="eyebrow center" style={{color: theme.primary}}>
+            <E onDark value={c.faq_eyebrow} onChange={v=>setField('faq_eyebrow',v)} className="center"/>
+          </div>
+          <h2 className="h2-display">
+            <E onDark value={c.faq_headline} onChange={v=>setField('faq_headline',v)} className="center"/>
+          </h2>
+          <div className="faq-list">
+            {c.faq.map((f,i) => (
+              <React.Fragment key={i}>
+                <div className={`faq-item ${openFaq === i ? 'open' : ''}`}
+                     onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                  <span className="faq-item-q">
+                    <E value={f.q} onChange={v=>setField(`faq.${i}.q`, v)}/>
+                  </span>
+                  <span className="faq-item-arrow">▾</span>
+                </div>
+                {openFaq === i && (
+                  <div className="faq-item-a">
+                    <E multi value={f.a} onChange={v=>setField(`faq.${i}.a`, v)}/>
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+          <h2 className="h2-display faq-final-cta">
+            <E onDark value={c.final_cta_headline} onChange={v=>setField('final_cta_headline',v)} className="center"/>
+          </h2>
+          <div style={{textAlign:'center', marginTop: 24}}>
+            <button className="cta">
+              <E inline value={c.final_cta_btn} onChange={v=>setField('final_cta_btn',v)}/>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <div className="footer-bar">
+        Copyrights <E inline value={c.year} onChange={v=>setField('year',v)}/> | <E inline value={c.trademark} onChange={v=>setField('trademark',v)}/> | Terms & Conditions
+      </div>
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// CHECKOUT PAGE
+// ═══════════════════════════════════════════════════════
+function CheckoutPage({ c, setField, theme, openFaq, setOpenFaq }) {
+  return (
+    <>
+      {/* HEADER */}
+      <section className="section" style={{paddingBottom: 40}}>
+        <BgSvg light lineColor={theme.lineLight}/>
+        <div className="section-inner" style={{textAlign:'center'}}>
+          <div className="eyebrow center">
+            <E value={c.checkout_eyebrow} onChange={v=>setField('checkout_eyebrow',v)} className="center"/>
+          </div>
+          <h1 className="h1-display" style={{textAlign:'center', maxWidth: 720, margin:'0 auto 16px'}}>
+            <E value={c.checkout_headline} onChange={v=>setField('checkout_headline',v)} className="center"/>
+          </h1>
+        </div>
+      </section>
+
+      {/* PAYMENT + OFFER */}
+      <section className="section" style={{paddingTop: 0}}>
+        <div className="section-inner">
+          <div className="checkout-grid">
+            <div className="checkout-form-card">
+              <h2 className="h2-display left" style={{fontSize:28, marginBottom:6}}>
+                <E value={c.checkout_subhead} onChange={v=>setField('checkout_subhead',v)}/>
+              </h2>
+              <p className="body-lg" style={{marginBottom: 28, maxWidth:'none'}}>
+                <E multi value={c.checkout_desc} onChange={v=>setField('checkout_desc',v)}/>
+              </p>
+
+              <div className="checkout-section-h">Payment</div>
+              <div className="checkout-line">
+                <span>Item · Quantity</span><span>Price</span>
+              </div>
+              <div className="checkout-line">
+                <span><E inline value={c.course_name} onChange={v=>setField('course_name',v)}/> · 1</span>
+                <span><E inline value={c.price} onChange={v=>setField('price',v)}/></span>
+              </div>
+              <div className="checkout-coupon">
+                <input type="text" placeholder="Coupon code"/>
+                <button>Apply</button>
+              </div>
+              <div className="checkout-section-h">Payment method</div>
+              <div className="checkout-line"><span>(payment provider — preview)</span></div>
+              <div className="checkout-secure">★ 100% Secure & Safe Payments ★</div>
+            </div>
+
+            {/* RIGHT — offer recap, mirrors the sales pricing card */}
+            <div>
+              <div className="pricing-trustpilot">
+                <span className="pricing-trustpilot-stars">★★★★★</span>
+                <span>4.9/5 star reviews</span>
+              </div>
+              <ImgSlot ai label="Laptop mockup" style={{aspectRatio:'4/3', margin:'16px 0 28px'}}/>
+              <div className="pricing-card-title">
+                <E value={c.pricing_card_title} onChange={v=>setField('pricing_card_title',v)}/>
+              </div>
+              <ul className="pricing-benefits">
+                {c.pricing_benefits.map((b,i) => (
+                  <li key={i}><E multi value={b} onChange={v=>setField(`pricing_benefits.${i}`, v)}/></li>
+                ))}
+              </ul>
+              <div className="pricing-today">
+                <E value={c.pricing_today_label} onChange={v=>setField('pricing_today_label',v)}/>
+              </div>
+              <div className="pricing-amount">
+                <E value={c.price} onChange={v=>setField('price',v)}/>
+              </div>
+              <div className="featured-testimonial">
+                <ImgSlot label="Wall img (static)" style={{width:80,height:80,borderRadius:'50%'}}/>
+                <div>
+                  <span className="featured-testimonial-name">
+                    <E value={c.featured_name} onChange={v=>setField('featured_name',v)}/>
+                  </span>
+                  <div className="featured-testimonial-body">
+                    "<E multi value={c.featured_quote} onChange={v=>setField('featured_quote',v)}/>"
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SATISFACTION */}
+      <section className="section">
+        <div className="section-inner satisfaction-inner">
+          <div className="eyebrow center">
+            <E value={c.checkout_sat_eyebrow} onChange={v=>setField('checkout_sat_eyebrow',v)} className="center"/>
+          </div>
+          <h2 className="h2-display">
+            <E value={c.checkout_sat_headline} onChange={v=>setField('checkout_sat_headline',v)} className="center"/>
+          </h2>
+          <p className="body-lg center">
+            <E multi value={c.checkout_sat_body} onChange={v=>setField('checkout_sat_body',v)} className="center"/>
+          </p>
+          <div className="satisfaction-shield">100%<br/>SATISFACTION<br/>GUARANTEED</div>
+        </div>
+      </section>
+
+      {/* FAQ — DARK */}
+      <section className="section dark">
+        <BgSvg lineColor={theme.lineDark}/>
+        <div className="section-inner">
+          <div className="eyebrow center" style={{color: theme.primary}}>
+            <E onDark value={c.faq_eyebrow} onChange={v=>setField('faq_eyebrow',v)} className="center"/>
+          </div>
+          <h2 className="h2-display">
+            <E onDark value={c.faq_headline} onChange={v=>setField('faq_headline',v)} className="center"/>
+          </h2>
+          <div className="faq-list">
+            {c.faq.map((f,i) => (
+              <React.Fragment key={i}>
+                <div className={`faq-item ${openFaq === i ? 'open' : ''}`}
+                     onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                  <span className="faq-item-q">
+                    <E value={f.q} onChange={v=>setField(`faq.${i}.q`, v)}/>
+                  </span>
+                  <span className="faq-item-arrow">▾</span>
+                </div>
+                {openFaq === i && (
+                  <div className="faq-item-a">
+                    <E multi value={f.a} onChange={v=>setField(`faq.${i}.a`, v)}/>
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="footer-bar">
+        Copyrights <E inline value={c.year} onChange={v=>setField('year',v)}/> | <E inline value={c.trademark} onChange={v=>setField('trademark',v)}/> | Terms & Conditions
+      </div>
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// CONFIRMATION PAGE
+// ═══════════════════════════════════════════════════════
+function ConfirmationPage({ c, setField, theme }) {
+  return (
+    <>
+      {/* Top dark bar */}
+      <div className="confirm-bar">
+        <BgSvg lineColor={theme.lineDark}/>
+      </div>
+
+      <section className="section">
+        <div className="section-inner" style={{textAlign:'center'}}>
+          <div className="eyebrow center">
+            <E value={c.confirm_eyebrow} onChange={v=>setField('confirm_eyebrow',v)} className="center"/>
+          </div>
+          <h1 className="h1-display" style={{textAlign:'center'}}>
+            <E value={c.confirm_headline} onChange={v=>setField('confirm_headline',v)} className="center"/>
+          </h1>
+          <div className="confirm-check">✓</div>
+          <div className="eyebrow center" style={{marginTop: 40}}>
+            <E value={c.confirm_next_eyebrow} onChange={v=>setField('confirm_next_eyebrow',v)} className="center"/>
+          </div>
+          <h2 className="h2-display">
+            <E value={c.confirm_next_headline} onChange={v=>setField('confirm_next_headline',v)} className="center"/>
+          </h2>
+          <p className="body-lg center" style={{marginTop: 12}}>
+            <E multi value={c.confirm_next_body} onChange={v=>setField('confirm_next_body',v)} className="center"/>
+          </p>
+        </div>
+      </section>
+
+      {/* Bottom dark bar */}
+      <div className="footer-bar" style={{padding:'24px'}}>
+        Copyrights <E inline value={c.year} onChange={v=>setField('year',v)}/> | <E inline value={c.trademark} onChange={v=>setField('trademark',v)}/> | Terms & Conditions
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

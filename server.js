@@ -1646,6 +1646,11 @@ app.get('/funnel-only', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'funnel-only.html'));
 });
 app.get('/funnel-preview/:draftId', (req, res) => {
+  // Redirect to the new visual preview (form-based preview kept available at
+  // /funnel-preview-classic for fallback / debugging).
+  res.redirect(`/funnel-visual-preview.html?draft=${encodeURIComponent(req.params.draftId)}`);
+});
+app.get('/funnel-preview-classic/:draftId', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'funnel-preview.html'));
 });
 

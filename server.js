@@ -1874,24 +1874,41 @@ app.post('/api/funnel-only/push/:draftId', async (req, res) => {
 
     // ────────────────────────────────────────────────────────────────
     // STEP A — Apply the chosen theme's snapshot to the sub-account.
-    // Uses the AGENCY token (snapshot operations are agency-scoped).
+    // Uses the agency admin's User JWT (NOT OAuth) — the snapshot
+    // endpoint lives on backend.leadconnectorhq.com and only accepts
+    // User-authClass tokens. Same auth pair as thumbnail-attach.
     // If no theme was picked, default to Ocean.
-    // If snapshot import fails, we continue with customValues push
-    // anyway — the assumption is that the snapshot may have already
-    // been applied in a previous push.
+    // If snapshot import fails, we continue with the customValues push
+    // anyway — the assumption is the themed funnel may already exist
+    // from a previous push (e.g. on re-pushes, or after manual import).
     // ────────────────────────────────────────────────────────────────
     const themeKey = isValidTheme(draft.input.theme) ? draft.input.theme : DEFAULT_THEME;
     const theme = getTheme(themeKey);
     emit({ phase: 'theme-snapshot', status: 'start', theme: themeKey, snapshotId: theme.snapshotId });
     try {
-      const agency = await resolveCompanyToken(locationId);
-      await loadSnapshotToLocation({
-        companyAccessToken: agency.accessToken,
-        companyId: agency.companyId,
+      const userAuth = await getActiveUserJwt();
+      if (!userAuth?.jwt) {
+        throw new Error('No User JWT available — paste one at /setup or open CC360 in a tab so the snippet syncs one.');
+      }
+      // companyId for the snapshot endpoint: decode it from the User JWT's
+      // Firebase token-id payload (contains `company_id`), with a fallback
+      // to the OAuth install record if for some reason the JWT lacks it.
+      let companyId = null;
+      try { companyId = decodeJwtPayload(userAuth.tokenId || userAuth.jwt)?.company_id || null; } catch {}
+      if (!companyId) {
+        try { companyId = (await resolveCompanyToken(locationId))?.companyId || null; } catch {}
+      }
+      if (!companyId) {
+        throw new Error('Could not determine agency companyId for snapshot load.');
+      }
+      const loadResult = await loadSnapshotToLocation({
         snapshotId: theme.snapshotId,
         locationId,
+        companyId,
+        userJwt: userAuth.jwt,
+        tokenId: userAuth.tokenId,
       });
-      console.log(`   ✓ Snapshot ${theme.snapshotId} (${themeKey}) applied to ${locationId}`);
+      console.log(`   ✓ Snapshot ${theme.snapshotId} (${themeKey}) applied to ${locationId}; counts=${JSON.stringify(loadResult.assetCounts)}`);
       emit({ phase: 'theme-snapshot', status: 'propagating' });
       await waitForSnapshotPropagation(8000);
       emit({ phase: 'theme-snapshot', status: 'done', theme: themeKey });

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CC360 Studio · Snapshot Load Test</title>
+<style>
+  :root {
+    --bg: #f6f6f0; --surface: #fff; --border: #e5e5e0; --border-strong: #d4d4d0;
+    --text: #0a0a0a; --text-dim: #4a4a4a; --text-faint: #7a7a7a;
+    --accent: #6366f1; --accent-soft: rgba(99,102,241,0.08);
+    --ok: #10b981; --ok-soft: #ecfdf5; --bad: #dc2626; --bad-soft: #fef2f2;
+    --warn: #b45309; --warn-soft: #fffbeb;
+    --mono: 'SF Mono', Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 24px;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px; line-height: 1.5;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header { margin-bottom: 24px; }
+  h1 { font-size: 22px; margin: 0 0 6px; font-weight: 600; }
+  .sub { color: var(--text-dim); font-size: 13px; margin: 0; }
+  .back {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-faint); text-decoration: none;
+    margin-bottom: 18px;
+  }
+  .back:hover { color: var(--accent); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 22px; margin-bottom: 16px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-dim); margin-bottom: 6px;
+  }
+  input, select {
+    width: 100%; padding: 9px 11px;
+    border: 1px solid var(--border-strong); border-radius: 7px;
+    background: var(--surface); color: var(--text);
+    font-size: 14px; font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input.mono { font-family: var(--mono); font-size: 13px; }
+  input:focus, select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .row { display: grid; grid-template-columns: 1fr 200px; gap: 12px; }
+
+  .help {
+    font-size: 12px; color: var(--text-faint); margin-top: 6px;
+  }
+
+  button.primary {
+    background: var(--accent); color: white;
+    border: 1px solid var(--accent); border-radius: 7px;
+    padding: 10px 18px; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: filter 0.15s;
+  }
+  button.primary:hover:not(:disabled) { filter: brightness(0.92); }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .result { display: none; }
+  .result.visible { display: block; }
+  .result-banner {
+    padding: 12px 14px; border-radius: 8px;
+    font-weight: 500; font-size: 13px;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 14px;
+  }
+  .result-banner.ok  { background: var(--ok-soft);  color: var(--ok);  border: 1px solid #a7f3d0; }
+  .result-banner.bad { background: var(--bad-soft); color: var(--bad); border: 1px solid #fecaca; }
+
+  .kv {
+    display: grid; grid-template-columns: 140px 1fr; gap: 6px 14px;
+    font-size: 13px; padding: 4px 0;
+  }
+  .kv-key { color: var(--text-faint); font-weight: 500; }
+  .kv-val { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+
+  details { margin-top: 12px; }
+  summary { cursor: pointer; font-size: 12px; color: var(--text-faint); }
+  pre {
+    background: #0a0a0a; color: #d4d4d0;
+    padding: 12px; border-radius: 7px;
+    font-family: var(--mono); font-size: 11px;
+    overflow-x: auto; margin: 8px 0 0;
+  }
+
+  .jwt-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; font-size: 11px; font-weight: 600;
+    border-radius: 999px;
+  }
+  .jwt-badge.ok   { background: var(--ok-soft);   color: var(--ok);   }
+  .jwt-badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .jwt-badge.bad  { background: var(--bad-soft);  color: var(--bad);  }
+
+  .empty-help {
+    text-align: center; padding: 26px 18px; color: var(--text-faint);
+    font-size: 13px; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="/setup" class="back">← Back to Setup</a>
+  <header>
+    <h1>Snapshot Load Test</h1>
+    <p class="sub">
+      Load a themed snapshot into a sub-account without running the full push pipeline.
+      <strong>Zero AI cost</strong> — use this to debug snapshot/auth issues without burning image credits.
+    </p>
+  </header>
+
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label for="locationId">Target Sub-Account Location ID</label>
+        <input id="locationId" class="mono" placeholder="e.g. lZwsGNpYaFFQY3EdmOhX" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="themeKey">Theme</label>
+        <select id="themeKey">
+          <option value="ocean">Ocean</option>
+          <option value="emerald">Emerald</option>
+          <option value="amber">Amber</option>
+          <option value="rose">Rose</option>
+          <option value="slate">Slate</option>
+        </select>
+      </div>
+    </div>
+    <p class="help">A fresh themed funnel will be loaded into this sub-account. Re-running with the same theme will update the existing one (override on conflict).</p>
+    <button id="testBtn" class="primary">Test Snapshot Load</button>
+  </div>
+
+  <div id="result" class="result">
+    <div class="card">
+      <div id="banner" class="result-banner"></div>
+      <div id="kvs"></div>
+      <details>
+        <summary>Raw response</summary>
+        <pre id="raw"></pre>
+      </details>
+    </div>
+  </div>
+
+  <div class="card empty-help">
+    <strong>Heads up:</strong> if you get a 401, your User JWT may have expired. Reload any CC360 tab so the Custom JS snippet auto-pushes a fresh one, then retry.
+  </div>
+</div>
+
+<script>
+const LS_KEY = 'cc360.test-snapshot.locationId';
+const locationInput = document.getElementById('locationId');
+const themeSelect = document.getElementById('themeKey');
+const testBtn = document.getElementById('testBtn');
+const resultBox = document.getElementById('result');
+const banner = document.getElementById('banner');
+const kvs = document.getElementById('kvs');
+const raw = document.getElementById('raw');
+
+try { locationInput.value = localStorage.getItem(LS_KEY) || ''; } catch (_) {}
+
+testBtn.addEventListener('click', async () => {
+  const locationId = locationInput.value.trim();
+  const themeKey = themeSelect.value;
+  if (!locationId) {
+    banner.className = 'result-banner bad';
+    banner.textContent = 'Enter a location ID first.';
+    resultBox.classList.add('visible');
+    return;
+  }
+  try { localStorage.setItem(LS_KEY, locationId); } catch (_) {}
+
+  testBtn.disabled = true;
+  testBtn.textContent = 'Loading snapshot…';
+  resultBox.classList.remove('visible');
+
+  try {
+    const r = await fetch('/api/test-snapshot-load', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locationId, themeKey }),
+    });
+    const data = await r.json();
+    renderResult(r.ok && data.ok, data);
+  } catch (e) {
+    renderResult(false, { error: e.message });
+  } finally {
+    testBtn.disabled = false;
+    testBtn.textContent = 'Test Snapshot Load';
+  }
+});
+
+function renderResult(ok, data) {
+  banner.className = 'result-banner ' + (ok ? 'ok' : 'bad');
+  banner.textContent = ok
+    ? `✓ Snapshot loaded successfully in ${data.elapsedMs} ms`
+    : `✕ ${data.error || 'Failed'}`;
+
+  // Key facts
+  const items = [];
+  if (data.theme)      items.push(['Theme', data.theme]);
+  if (data.snapshotId) items.push(['Snapshot ID', data.snapshotId]);
+  if (data.locationId) items.push(['Target Location', data.locationId]);
+  if (data.companyId)  items.push(['Agency Company', data.companyId]);
+  if (data.assetCounts) items.push(['Assets Loaded', Object.entries(data.assetCounts).map(([k,v]) => `${k}: ${v}`).join(', ')]);
+
+  if (data.jwt) {
+    const j = data.jwt;
+    let badge;
+    if (j.minutesRemaining == null) badge = '<span class="jwt-badge bad">UNKNOWN</span>';
+    else if (j.minutesRemaining < 5) badge = '<span class="jwt-badge bad">' + j.minutesRemaining + ' min left</span>';
+    else if (j.minutesRemaining < 15) badge = '<span class="jwt-badge warn">' + j.minutesRemaining + ' min left</span>';
+    else badge = '<span class="jwt-badge ok">' + j.minutesRemaining + ' min left</span>';
+    const tidNote = j.hasTokenId ? ` · token-id: ${j.tokenIdMinutesRemaining ?? '?'} min` : ' · <strong>NO token-id!</strong>';
+    items.push(['JWT Health', badge + tidNote]);
+  }
+  if (data.elapsedMs != null) items.push(['Elapsed', data.elapsedMs + ' ms']);
+
+  kvs.innerHTML = items.map(([k, v]) => `
+    <div class="kv">
+      <div class="kv-key">${k}</div>
+      <div class="kv-val">${v}</div>
+    </div>
+  `).join('');
+
+  raw.textContent = JSON.stringify(data, null, 2);
+  resultBox.classList.add('visible');
+}
+</script>
+</body>
+</html>

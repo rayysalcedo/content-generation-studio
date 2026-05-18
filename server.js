@@ -1565,9 +1565,80 @@ async function getActiveUserJwt() {
 }
 
 // ---------------------------------------------------------------------
-// Thumbnail-attach jobs (browser-driven finalization)
-// The server's IP is blocked from GHL's backend.* WAF, so we let the
-// user's browser drain the queue from their CC360 tab.
+// Test endpoint: load a snapshot to a sub-account WITHOUT running the full
+// push pipeline. Zero AI cost. Useful when debugging the snapshot endpoint
+// (auth, headers, body shape) so you don't burn image credits per attempt.
+//
+// POST /api/test-snapshot-load
+//   body: { locationId, themeKey?, snapshotId? }
+//     - locationId: target sub-account (required)
+//     - themeKey:   one of ocean/emerald/amber/rose/slate (optional; default ocean)
+//     - snapshotId: override theme's snapshotId for ad-hoc tests (optional)
+//
+// Returns the same diagnostics your push flow would log, plus the raw
+// API response on success or the full status+body on failure.
+// ---------------------------------------------------------------------
+app.post('/api/test-snapshot-load', async (req, res) => {
+  const t0 = Date.now();
+  try {
+    const { locationId, themeKey, snapshotId: snapshotIdOverride } = req.body || {};
+    if (!locationId) return res.status(400).json({ error: 'locationId is required' });
+    if (!isValidLocationId(locationId)) return res.status(400).json({ error: 'locationId looks malformed' });
+
+    const themeKeyToUse = isValidTheme(themeKey) ? themeKey : DEFAULT_THEME;
+    const theme = getTheme(themeKeyToUse);
+    const snapshotIdToUse = snapshotIdOverride || theme.snapshotId;
+
+    const userAuth = await getActiveUserJwt();
+    if (!userAuth?.jwt) {
+      return res.status(400).json({ error: 'No User JWT available. Paste one at /setup or open CC360 in a tab so the snippet syncs one.' });
+    }
+
+    // Decode companyId from the token-id (Firebase ID token) — it has company_id.
+    // Fall back to the OAuth install record if tokenId is missing.
+    let companyId = null;
+    try { companyId = decodeJwtPayload(userAuth.tokenId || userAuth.jwt)?.company_id || null; } catch {}
+    if (!companyId) {
+      try { companyId = (await resolveCompanyToken(locationId))?.companyId || null; } catch {}
+    }
+    if (!companyId) {
+      return res.status(400).json({ error: 'Could not determine agency companyId' });
+    }
+
+    // JWT expiry diagnostic
+    const jwtPayload = decodeJwtPayload(userAuth.jwt) || {};
+    const tokenIdPayload = decodeJwtPayload(userAuth.tokenId) || {};
+    const jwtMinLeft  = jwtPayload.exp ? Math.round((jwtPayload.exp * 1000 - Date.now()) / 60000) : null;
+    const tidMinLeft  = tokenIdPayload.exp ? Math.round((tokenIdPayload.exp * 1000 - Date.now()) / 60000) : null;
+
+    const result = await loadSnapshotToLocation({
+      snapshotId: snapshotIdToUse,
+      locationId,
+      companyId,
+      userJwt: userAuth.jwt,
+      tokenId: userAuth.tokenId,
+    });
+
+    res.json({
+      ok: true,
+      theme: themeKeyToUse,
+      snapshotId: snapshotIdToUse,
+      locationId,
+      companyId,
+      elapsedMs: Date.now() - t0,
+      jwt: { minutesRemaining: jwtMinLeft, hasTokenId: !!userAuth.tokenId, tokenIdMinutesRemaining: tidMinLeft },
+      ...result,
+    });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      elapsedMs: Date.now() - t0,
+      error: e.message,
+    });
+  }
+});
+
+
 // ---------------------------------------------------------------------
 function setFinalizeCors(res) {
   res.set('Access-Control-Allow-Origin', '*');

@@ -1797,6 +1797,17 @@ function PushOverlay({ events, done, hasFunnel, onClose, cc360Url }) {
           {allDone && cc360Url && (
             <a href={cc360Url} target="_blank" rel="noopener" className="btn btn-accent" style={{ textDecoration: 'none' }}>↗ Open course in CC360</a>
           )}
+          {allDone && hasFunnel && (() => {
+            // Pull locationId out of the start event so we can deep-link to the
+            // sub-account's Funnels list — the cloned themed funnel lands there.
+            const startEv = events.find(e => e.phase === 'start');
+            const lid = startEv?.locationId;
+            if (!lid) return null;
+            const funnelUrl = `https://app.coursecreator360.com/v2/location/${lid}/funnels-websites/funnels`;
+            return (
+              <a href={funnelUrl} target="_blank" rel="noopener" className="btn btn-primary" style={{ textDecoration: 'none' }}>↗ View funnel in CC360</a>
+            );
+          })()}
           <button className="btn" onClick={onClose} disabled={!done}>
             {done ? 'Close' : 'Working…'}
           </button>

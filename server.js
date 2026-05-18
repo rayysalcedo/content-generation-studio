@@ -28,7 +28,6 @@ import { store as tokenStore, backendName as tokenStoreBackend } from './lib/tok
 import { generateFunnelContent, flattenToCustomValueMap, nestedToFlatPreview, flatPreviewToNested } from './lib/generate-funnel.js';
 import { generateFunnelImages } from './lib/generate-funnel-images.js';
 import { pushCustomValues, uploadFunnelImages, uploadInstructorPhoto } from './lib/funnel-push.js';
-import { loadSnapshotToLocation, waitForSnapshotPropagation } from './lib/snapshot-push.js';
 import { cloneFunnelToLocations, waitForCloneVisibility } from './lib/funnel-share-push.js';
 import { THEMES, DEFAULT_THEME, getTheme, isValidTheme } from './lib/funnel-themes.js';
 
@@ -352,6 +351,19 @@ app.post(
     { name: 'instructorPhoto', maxCount: 1 },
   ]),
   async (req, res) => {
+  // ── Streaming response: NDJSON events as generation proceeds, ending with
+  //    a 'done' event containing the draftId. Same pattern as /api/push.
+  //    Errors are emitted as { phase: 'error', error: ... } before res.end().
+  res.setHeader('Content-Type', 'application/x-ndjson');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+  const emit = (event) => { try { res.write(JSON.stringify(event) + '\n'); } catch {} };
+  const fail = (errMsg, statusHint) => {
+    emit({ phase: 'error', error: errMsg, statusHint: statusHint || null });
+    res.end();
+  };
+
   try {
     const { mode, courseTitle, targetAudience, instructions, description, moduleCount, lessonsPerModule, accent, generateWorkbooks } = req.body;
     // Funnel toggle + inputs (all optional; required only when generateFunnel === 'true')
@@ -363,45 +375,48 @@ app.post(
     // Resolve & validate the target sub-account
     const locationId = pickLocationId(req.body.locationId);
     if (!locationId) {
-      return res.status(400).json({ error: 'Sub-account Location ID is required' });
+      return fail('Sub-account Location ID is required');
     }
     if (!isValidLocationId(locationId)) {
-      return res.status(400).json({ error: 'Sub-account Location ID looks malformed (expected ~20 alphanumeric characters)' });
+      return fail('Sub-account Location ID looks malformed (expected ~20 alphanumeric characters)');
     }
 
     if (!mode || !courseTitle) {
-      return res.status(400).json({ error: 'mode and courseTitle are required' });
+      return fail('mode and courseTitle are required');
     }
 
     // Validate funnel inputs up-front (before doing expensive course gen)
     if (generateFunnelFlag) {
-      if (!instructorName?.trim()) return res.status(400).json({ error: 'Funnel: Instructor name is required' });
-      if (!photoFile) return res.status(400).json({ error: 'Funnel: Instructor photo upload is required' });
-      if (!coursePrice?.trim()) return res.status(400).json({ error: 'Funnel: Course price is required' });
-      if (!/^#[0-9a-fA-F]{6}$/.test(brandDarkBg || '')) return res.status(400).json({ error: 'Funnel: Dark section color must be a 6-digit hex' });
+      if (!instructorName?.trim()) return fail('Funnel: Instructor name is required');
+      if (!photoFile) return fail('Funnel: Instructor photo upload is required');
+      if (!coursePrice?.trim()) return fail('Funnel: Course price is required');
+      // brandDarkBg is no longer collected from the form — themes own all colors now.
       // Funnel seed: in description mode reuse description; in pdf mode require funnelPitch
       if (mode === 'pdf' && (!funnelPitch || funnelPitch.trim().length < 20)) {
-        return res.status(400).json({ error: 'Funnel: Funnel Pitch is required (1-3 sentences) when course mode is PDF' });
+        return fail('Funnel: Funnel Pitch is required (1-3 sentences) when course mode is PDF');
       }
     }
 
     let sourceText;
     if (mode === 'pdf') {
-      if (!pdfFile) return res.status(400).json({ error: 'PDF file is required for PDF mode' });
+      if (!pdfFile) return fail('PDF file is required for PDF mode');
       const { text } = await extractPdfText(pdfFile.path);
       sourceText = text;
       try { fs.unlinkSync(pdfFile.path); } catch (_) {}
       if (sourceText.length < 50) {
-        return res.status(400).json({ error: 'PDF text is too short. Is it scanned/image-based? OCR not supported.' });
+        return fail('PDF text is too short. Is it scanned/image-based? OCR not supported.');
       }
     } else if (mode === 'description') {
       if (!description || description.trim().length < 20) {
-        return res.status(400).json({ error: 'Course description must be at least 20 characters' });
+        return fail('Course description must be at least 20 characters');
       }
       sourceText = description.trim();
     } else {
-      return res.status(400).json({ error: `Unknown mode: ${mode}` });
+      return fail(`Unknown mode: ${mode}`);
     }
+
+    // Announce that we're getting started
+    emit({ phase: 'start', hasFunnel: generateFunnelFlag, hasWorkbooks: generateWorkbooks !== 'false' && generateWorkbooks !== false, hasThumbnails: req.body.generateThumbnails !== 'false' && req.body.generateThumbnails !== false });
 
     // Resolve course size — apply defaults when user left fields empty
     const resolvedModuleCount = resolveCount(moduleCount, DEFAULT_MODULE_COUNT);
@@ -409,6 +424,7 @@ app.post(
 
     // 1. Generate course structure (existing)
     console.log(`📚 Generating course structure for "${courseTitle}" (${resolvedModuleCount} × ${resolvedLessonsPerModule})...`);
+    emit({ phase: 'outline', status: 'start' });
     const structure = await generateCourseStructure({
       apiKey: OPENAI_API_KEY,
       model: OPENAI_TEXT_MODEL,
@@ -424,80 +440,94 @@ app.post(
 
     const totalLessons = (structure.modules || []).reduce((n, m) => n + (m.lessons?.length || 0), 0);
     console.log(`   ✓ ${structure.modules?.length || 0} modules, ${totalLessons} lessons`);
+    emit({ phase: 'outline', status: 'done', moduleCount: structure.modules?.length || 0, lessonCount: totalLessons });
 
-    // 2. Generate workbook content (NEW) — only if user hasn't disabled it
-    const wantWorkbooks = generateWorkbooks !== 'false' && generateWorkbooks !== false;
-    let workbookStats = { total: 0, failed: 0 };
-    if (wantWorkbooks && totalLessons > 0) {
-      console.log(`📝 Generating workbook content for ${totalLessons} lessons (parallel batches)...`);
+    // 2-4. Kick off three INDEPENDENT chains in parallel — each only depends on
+    // `structure` (or in the funnel-image case, on the funnel-content output of
+    // its own chain). Promise.allSettled means a failure in one chain doesn't
+    // sabotage the others, mirroring the original sequential error-handling.
+    //
+    // Old sequential timing (typical 25-lesson course, with BATCH_SIZE=1 image gen):
+    //   outline → workbooks (~3m) → thumbnails (~5.6m) → funnel (~3.5m) ≈ 13 min total
+    // New parallel + bumped concurrency:
+    //   outline → max(workbooks~1.5m, thumbnails~1m, funnel~2m) ≈ 3-4 min total
+    const wantWorkbooks  = generateWorkbooks !== 'false' && generateWorkbooks !== false;
+    const wantThumbnails = req.body.generateThumbnails !== 'false' && req.body.generateThumbnails !== false;
+    console.log(`⚡ Starting parallel generation: workbooks=${wantWorkbooks}, thumbnails=${wantThumbnails}, funnel=${generateFunnelFlag}`);
+    const tParallel = Date.now();
+
+    // ── Chain 1: Workbooks (depends on `structure` only) ────────────────
+    const workbookChain = (async () => {
+      if (!(wantWorkbooks && totalLessons > 0)) {
+        return { skipped: true, stats: { total: 0, failed: 0 } };
+      }
+      console.log(`📝 [parallel] Generating workbook content for ${totalLessons} lessons...`);
+      emit({ phase: 'workbooks', status: 'start', total: totalLessons });
       const r = await generateWorkbooksForCourse({
         apiKey: OPENAI_API_KEY,
         model: OPENAI_TEXT_MODEL,
         structure,
         onProgress: ({ done, total, failed }) => {
-          // Throttle log noise — log every 5
           if (done % 5 === 0 || done === total) {
-            console.log(`   ...${done}/${total} done${failed ? ` (${failed} failed)` : ''}`);
+            console.log(`   📝 ...${done}/${total} workbooks${failed ? ` (${failed} failed)` : ''}`);
           }
+          emit({ phase: 'workbooks', status: 'progress', done, total, failed });
         },
       });
-      workbookStats = { total: r.total, failed: r.failed };
       console.log(`   ✓ Workbooks: ${r.total - r.failed}/${r.total} succeeded`);
-    } else {
-      console.log(`   (workbook generation skipped)`);
-    }
+      emit({ phase: 'workbooks', status: 'done', total: r.total, failed: r.failed });
+      return { skipped: false, stats: { total: r.total, failed: r.failed } };
+    })();
 
-    // 3. Generate AI cartoon thumbnails (course hero + lesson icons) — toggleable
-    const wantThumbnails = req.body.generateThumbnails !== 'false' && req.body.generateThumbnails !== false;
-    let thumbnailStats = { total: 0, failed: 0 };
-    let thumbnails = {};                 // { course: b64, "m0-l0": b64, ... }
-    if (wantThumbnails && totalLessons > 0) {
-      if (!OPENAI_API_KEY) {
-        console.warn(`⚠️  Thumbnails requested but OPENAI_API_KEY is not set — skipping.`);
-        thumbnailStats = { total: totalLessons + 1, failed: totalLessons + 1, error: 'OPENAI_API_KEY not configured' };
-      } else {
-        console.log(`🎨 Generating ${totalLessons + 1} AI thumbnails via OpenAI (${OPENAI_IMAGE_MODEL}, ${OPENAI_IMAGE_QUALITY})...`);
-        try {
-          const r = await generateThumbnailsForCourse({
-            apiKey: OPENAI_API_KEY,
-            model: OPENAI_IMAGE_MODEL,
-            quality: OPENAI_IMAGE_QUALITY,
-            structure,
-            accent: accent || '#6366f1',
-            targetAudience: targetAudience || '',
-            onProgress: ({ done, total, failed, label }) => {
-              if (done % 5 === 0 || done === total) {
-                console.log(`   ...${done}/${total} done${failed ? ` (${failed} failed)` : ''} — last: ${label}`);
-              }
-            },
-          });
-          thumbnails = r.thumbnails;
-          thumbnailStats = { total: r.total, failed: r.failed };
-          console.log(`   ✓ Thumbnails: ${r.total - r.failed}/${r.total} succeeded`);
-        } catch (e) {
-          console.warn(`⚠️  Thumbnail generation block failed: ${e.message}. Continuing without thumbnails.`);
-          thumbnailStats = { total: totalLessons + 1, failed: totalLessons + 1, error: e.message };
-        }
+    // ── Chain 2: Thumbnails (depends on `structure` only) ───────────────
+    const thumbnailChain = (async () => {
+      if (!(wantThumbnails && totalLessons > 0)) {
+        return { skipped: true, stats: { total: 0, failed: 0 }, thumbnails: {} };
       }
-    } else {
-      console.log(`   (thumbnail generation skipped)`);
-    }
+      if (!OPENAI_API_KEY) {
+        return { skipped: true, stats: { total: totalLessons + 1, failed: totalLessons + 1, error: 'OPENAI_API_KEY not configured' }, thumbnails: {} };
+      }
+      console.log(`🎨 [parallel] Generating ${totalLessons + 1} AI thumbnails (${OPENAI_IMAGE_MODEL}, ${OPENAI_IMAGE_QUALITY})...`);
+      emit({ phase: 'thumbnails', status: 'start', total: totalLessons + 1 });
+      try {
+        const r = await generateThumbnailsForCourse({
+          apiKey: OPENAI_API_KEY,
+          model: OPENAI_IMAGE_MODEL,
+          quality: OPENAI_IMAGE_QUALITY,
+          structure,
+          accent: accent || '#6366f1',
+          targetAudience: targetAudience || '',
+          onProgress: ({ done, total, failed, label }) => {
+            if (done % 5 === 0 || done === total) {
+              console.log(`   🎨 ...${done}/${total} thumbnails${failed ? ` (${failed} failed)` : ''} — last: ${label}`);
+            }
+            emit({ phase: 'thumbnails', status: 'progress', done, total, failed, label });
+          },
+        });
+        console.log(`   ✓ Thumbnails: ${r.total - r.failed}/${r.total} succeeded`);
+        emit({ phase: 'thumbnails', status: 'done', total: r.total, failed: r.failed });
+        return { skipped: false, stats: { total: r.total, failed: r.failed }, thumbnails: r.thumbnails };
+      } catch (e) {
+        console.warn(`⚠️  Thumbnail generation block failed: ${e.message}. Continuing without thumbnails.`);
+        emit({ phase: 'thumbnails', status: 'failed', error: e.message });
+        return { skipped: true, stats: { total: totalLessons + 1, failed: totalLessons + 1, error: e.message }, thumbnails: {} };
+      }
+    })();
 
-    // 4. (Optional) Generate AI funnel content + images if the toggle is on
-    let funnelContent = null;
-    let funnelImages = {};
-    let funnelImageStats = { total: 0, failed: 0 };
-    let instructorPhotoBlob = null;        // buffer held in memory until push
-    if (generateFunnelFlag) {
-      // Resolve the funnel seed (the description-like input for the AI funnel copywriter)
+    // ── Chain 3: Funnel content → Funnel images (chained inside, but the
+    // whole chain runs alongside chains 1 + 2) ──────────────────────────
+    const funnelChain = (async () => {
+      if (!generateFunnelFlag) {
+        return { skipped: true, funnelContent: null, funnelImages: {}, funnelImageStats: { total: 0, failed: 0 }, instructorPhotoBlob: null };
+      }
       const funnelSeed = mode === 'description'
         ? description.trim()
         : (funnelPitch || '').trim();
-      const brandPrimary = accent || '#6366f1';      // reuse course brand color as funnel primary
-
-      console.log(`📝 Generating funnel copy for "${courseTitle}" → ${locationId}...`);
+      const brandPrimary = accent || '#6366f1';
       try {
-        funnelContent = await generateFunnelContent({
+        console.log(`📝 [parallel] Generating funnel copy for "${courseTitle}"...`);
+        emit({ phase: 'funnel-content', status: 'start' });
+        const funnelContent = await generateFunnelContent({
           apiKey: OPENAI_API_KEY,
           model: OPENAI_TEXT_MODEL,
           courseTitle,
@@ -508,10 +538,13 @@ app.post(
           instructions: instructions || '',
         });
         console.log(`   ✓ Funnel copy generated`);
+        emit({ phase: 'funnel-content', status: 'done' });
 
-        // Funnel images (8 module thumbs + laptop mockup)
+        let funnelImages = {};
+        let funnelImageStats = { total: 0, failed: 0 };
         if (OPENAI_API_KEY) {
-          console.log(`🎨 Generating funnel images via OpenAI (${OPENAI_IMAGE_MODEL}, ${OPENAI_IMAGE_QUALITY})...`);
+          console.log(`🎨 [parallel] Generating funnel images (${OPENAI_IMAGE_MODEL}, ${OPENAI_IMAGE_QUALITY})...`);
+          emit({ phase: 'funnel-images', status: 'start' });
           try {
             const r = await generateFunnelImages({
               apiKey: OPENAI_API_KEY,
@@ -522,33 +555,54 @@ app.post(
               accent: brandPrimary,
               onProgress: ({ done, total, label }) => {
                 if (done === 1 || done % 3 === 0 || done === total) {
-                  console.log(`   ...${done}/${total} — last: ${label}`);
+                  console.log(`   🎨 ...${done}/${total} funnel imgs — last: ${label}`);
                 }
+                emit({ phase: 'funnel-images', status: 'progress', done, total, label });
               },
             });
             funnelImages = r.images;
             funnelImageStats = { total: r.total, failed: r.failed };
             console.log(`   ✓ Funnel images: ${r.total - r.failed}/${r.total} succeeded`);
+            emit({ phase: 'funnel-images', status: 'done', total: r.total, failed: r.failed });
           } catch (e) {
             console.warn(`⚠️  Funnel image generation failed: ${e.message}. Continuing without images.`);
+            emit({ phase: 'funnel-images', status: 'failed', error: e.message });
             funnelImageStats = { total: 9, failed: 9, error: e.message };
           }
         }
 
-        // Load the instructor photo into memory for later push
-        instructorPhotoBlob = {
+        const instructorPhotoBlob = {
           buffer: fs.readFileSync(photoFile.path),
           mime: photoFile.mimetype || 'image/jpeg',
           filename: photoFile.originalname || `instructor-${Date.now()}.jpg`,
         };
         try { fs.unlinkSync(photoFile.path); } catch (_) {}
+
+        return { skipped: false, funnelContent, funnelImages, funnelImageStats, instructorPhotoBlob };
       } catch (err) {
-        // Don't fail the whole request — course was generated, just flag the funnel error
-        console.warn(`⚠️  Funnel generation failed: ${err.message}`);
-        funnelContent = null;
-        funnelImageStats = { total: 0, failed: 0, error: err.message };
+        console.warn(`⚠️  Funnel chain failed: ${err.message}`);
+        return { skipped: true, funnelContent: null, funnelImages: {}, funnelImageStats: { total: 0, failed: 0, error: err.message }, instructorPhotoBlob: null };
       }
-    }
+    })();
+
+    // Wait for all three chains. allSettled never throws — each chain returns a
+    // descriptive object (and itself catches its inner errors), so we can pull
+    // the results out positionally without re-checking status.
+    const [workbookSettled, thumbnailSettled, funnelSettled] = await Promise.allSettled([
+      workbookChain, thumbnailChain, funnelChain,
+    ]);
+    const wbR = workbookSettled.status === 'fulfilled' ? workbookSettled.value : { stats: { total: 0, failed: 0, error: workbookSettled.reason?.message } };
+    const tbR = thumbnailSettled.status === 'fulfilled' ? thumbnailSettled.value : { stats: { total: 0, failed: 0, error: thumbnailSettled.reason?.message }, thumbnails: {} };
+    const fnR = funnelSettled.status    === 'fulfilled' ? funnelSettled.value    : { funnelContent: null, funnelImages: {}, funnelImageStats: { total: 0, failed: 0, error: funnelSettled.reason?.message }, instructorPhotoBlob: null };
+
+    const workbookStats     = wbR.stats;
+    const thumbnailStats    = tbR.stats;
+    const thumbnails        = tbR.thumbnails || {};
+    let   funnelContent     = fnR.funnelContent;
+    let   funnelImages      = fnR.funnelImages || {};
+    let   funnelImageStats  = fnR.funnelImageStats;
+    let   instructorPhotoBlob = fnR.instructorPhotoBlob;
+    console.log(`⚡ Parallel generation complete in ${Math.round((Date.now() - tParallel) / 1000)}s`);
 
     const draftId = randomUUID();
     drafts.set(draftId, {
@@ -581,23 +635,31 @@ app.post(
       instructorPhoto: instructorPhotoBlob,           // null or { buffer, mime, filename }
     });
 
-    res.json({
+    emit({
+      phase: 'done',
       draftId,
-      structure,
+      redirectUrl: `/preview/${draftId}`,
       regen: getRegenInfo(locationId),
       workbookStats,
       thumbnailStats,
       funnel: {
         generated: !!funnelContent,
-        content: funnelContent,
         imageStats: funnelImageStats,
         imageKeys: Object.keys(funnelImages),
       },
     });
+    res.end();
   } catch (err) {
     console.error('Generate error:', err);
     const friendly = humanizeAiError(err);
-    res.status(500).json({ error: friendly, raw: err.message });
+    // Stream may already be open — emit a final error event then end. If headers
+    // weren't sent yet for some reason, fall back to a JSON 500.
+    if (res.headersSent) {
+      emit({ phase: 'error', error: friendly, raw: err.message });
+      res.end();
+    } else {
+      res.status(500).json({ error: friendly, raw: err.message });
+    }
   }
 });
 
@@ -1223,18 +1285,15 @@ app.post('/api/push/:draftId', async (req, res) => {
         footerYear: new Date().getFullYear(),
       });
       valueMap.instructor_name = draft.input.instructorName;
-      valueMap.brand_primary = draft.input.brandPrimary || accent;
-      valueMap.brand_dark_bg = draft.input.brandDarkBg || '#0A1C3D';
+      // Note: brand_primary / brand_dark_bg / section bg custom values are NOT
+      // written — the themed funnel template owns those colors and backgrounds.
+      // Writing them here would have no effect (no merge tag in the template).
       if (instructorPhotoUrl) valueMap.instructor_photo_url = instructorPhotoUrl;
       for (let i = 1; i <= 8; i++) {
         const k = `module_${i}`;
         if (funnelImageUrls[k]) valueMap[`module_${i}_image_url`] = funnelImageUrls[k];
       }
       if (funnelImageUrls.pricing_laptop) valueMap.pricing_laptop_image = funnelImageUrls.pricing_laptop;
-      // Section background images (Option C — per-section AI-generated bgs)
-      if (funnelImageUrls.hero_bg)   valueMap.hero_bg_image   = funnelImageUrls.hero_bg;
-      if (funnelImageUrls.faq_bg)    valueMap.faq_bg_image    = funnelImageUrls.faq_bg;
-      if (funnelImageUrls.footer_bg) valueMap.footer_bg_image = funnelImageUrls.footer_bg;
       // Inside-card icons (6 — for "What You Will Get in This Course")
       for (let i = 1; i <= 6; i++) {
         const k = `inside_card_${i}_icon`;
@@ -1603,80 +1662,6 @@ async function getActiveUserJwt() {
   } catch {}
   return CC360_USER_JWT ? { jwt: CC360_USER_JWT, tokenId: null } : null;
 }
-
-// ---------------------------------------------------------------------
-// Test endpoint: load a snapshot to a sub-account WITHOUT running the full
-// push pipeline. Zero AI cost. Useful when debugging the snapshot endpoint
-// (auth, headers, body shape) so you don't burn image credits per attempt.
-//
-// POST /api/test-snapshot-load
-//   body: { locationId, themeKey?, snapshotId? }
-//     - locationId: target sub-account (required)
-//     - themeKey:   one of ocean/emerald/amber/rose/slate (optional; default ocean)
-//     - snapshotId: override theme's snapshotId for ad-hoc tests (optional)
-//
-// Returns the same diagnostics your push flow would log, plus the raw
-// API response on success or the full status+body on failure.
-// ---------------------------------------------------------------------
-app.post('/api/test-snapshot-load', async (req, res) => {
-  const t0 = Date.now();
-  try {
-    const { locationId, themeKey, snapshotId: snapshotIdOverride } = req.body || {};
-    if (!locationId) return res.status(400).json({ error: 'locationId is required' });
-    if (!isValidLocationId(locationId)) return res.status(400).json({ error: 'locationId looks malformed' });
-
-    const themeKeyToUse = isValidTheme(themeKey) ? themeKey : DEFAULT_THEME;
-    const theme = getTheme(themeKeyToUse);
-    const snapshotIdToUse = snapshotIdOverride || theme.snapshotId;
-
-    const userAuth = await getActiveUserJwt();
-    if (!userAuth?.jwt) {
-      return res.status(400).json({ error: 'No User JWT available. Paste one at /setup or open CC360 in a tab so the snippet syncs one.' });
-    }
-
-    // Decode companyId from the token-id (Firebase ID token) — it has company_id.
-    // Fall back to the OAuth install record if tokenId is missing.
-    let companyId = null;
-    try { companyId = decodeJwtPayload(userAuth.tokenId || userAuth.jwt)?.company_id || null; } catch {}
-    if (!companyId) {
-      try { companyId = (await resolveCompanyToken(locationId))?.companyId || null; } catch {}
-    }
-    if (!companyId) {
-      return res.status(400).json({ error: 'Could not determine agency companyId' });
-    }
-
-    // JWT expiry diagnostic
-    const jwtPayload = decodeJwtPayload(userAuth.jwt) || {};
-    const tokenIdPayload = decodeJwtPayload(userAuth.tokenId) || {};
-    const jwtMinLeft  = jwtPayload.exp ? Math.round((jwtPayload.exp * 1000 - Date.now()) / 60000) : null;
-    const tidMinLeft  = tokenIdPayload.exp ? Math.round((tokenIdPayload.exp * 1000 - Date.now()) / 60000) : null;
-
-    const result = await loadSnapshotToLocation({
-      snapshotId: snapshotIdToUse,
-      locationId,
-      companyId,
-      userJwt: userAuth.jwt,
-      tokenId: userAuth.tokenId,
-    });
-
-    res.json({
-      ok: true,
-      theme: themeKeyToUse,
-      snapshotId: snapshotIdToUse,
-      locationId,
-      companyId,
-      elapsedMs: Date.now() - t0,
-      jwt: { minutesRemaining: jwtMinLeft, hasTokenId: !!userAuth.tokenId, tokenIdMinutesRemaining: tidMinLeft },
-      ...result,
-    });
-  } catch (e) {
-    res.status(500).json({
-      ok: false,
-      elapsedMs: Date.now() - t0,
-      error: e.message,
-    });
-  }
-});
 
 // ---------------------------------------------------------------------
 // Test endpoint: clone a funnel into a target sub-account via the SHARE
@@ -2145,18 +2130,14 @@ app.post('/api/funnel-only/push/:draftId', async (req, res) => {
       footerYear: new Date().getFullYear(),
     });
     valueMap.instructor_name = draft.input.instructorName;
-    valueMap.brand_primary = draft.input.brandPrimary;
-    valueMap.brand_dark_bg = draft.input.brandDarkBg;
+    // Note: brand_primary / brand_dark_bg / section bg custom values are NOT
+    // written — the themed funnel template owns those colors and backgrounds.
     if (instructorPhotoUrl) valueMap.instructor_photo_url = instructorPhotoUrl;
     for (let i = 1; i <= 8; i++) {
       const k = `module_${i}`;
       if (funnelImageUrls[k]) valueMap[`module_${i}_image_url`] = funnelImageUrls[k];
     }
     if (funnelImageUrls.pricing_laptop) valueMap.pricing_laptop_image = funnelImageUrls.pricing_laptop;
-    // Section background images (Option C — per-section AI-generated bgs)
-    if (funnelImageUrls.hero_bg)   valueMap.hero_bg_image   = funnelImageUrls.hero_bg;
-    if (funnelImageUrls.faq_bg)    valueMap.faq_bg_image    = funnelImageUrls.faq_bg;
-    if (funnelImageUrls.footer_bg) valueMap.footer_bg_image = funnelImageUrls.footer_bg;
     // Inside-card icons (6 — for "What You Will Get in This Course")
     for (let i = 1; i <= 6; i++) {
       const k = `inside_card_${i}_icon`;

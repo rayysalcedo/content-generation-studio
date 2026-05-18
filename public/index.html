@@ -311,6 +311,88 @@
     .form { padding: 24px 18px; }
     .row { grid-template-columns: 1fr; }
   }
+  /* ─────────────────────────────────────────────────────────────────
+     Generation Progress Modal — shown while /api/generate streams events
+     ───────────────────────────────────────────────────────────────── */
+  .gen-progress-backdrop {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 180ms ease;
+  }
+  .gen-progress-backdrop.visible { opacity: 1; pointer-events: auto; }
+  .gen-progress-modal {
+    background: #ffffff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 480px;
+    padding: 28px 28px 22px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.36);
+    transform: translateY(8px);
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .gen-progress-backdrop.visible .gen-progress-modal { transform: translateY(0); }
+  .gp-icon { font-size: 34px; line-height: 1; margin-bottom: 6px; }
+  .gp-title {
+    font-family: var(--display, ui-serif, serif);
+    font-size: 22px; font-weight: 500; margin: 0 0 6px; color: var(--text, #0f172a);
+  }
+  .gp-sub {
+    font-size: 13px; color: var(--text-dim, #64748b);
+    margin: 0 0 18px; min-height: 18px; line-height: 1.5;
+    transition: color 200ms;
+  }
+  .gp-bar {
+    height: 8px; background: #eef2ff; border-radius: 999px;
+    overflow: hidden; margin-bottom: 18px;
+  }
+  .gp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent, #6366f1) 0%, #a78bfa 100%);
+    border-radius: 999px;
+    transition: width 480ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .gp-phase-list {
+    list-style: none; padding: 0; margin: 0 0 16px;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .gp-phase {
+    display: flex; align-items: center; gap: 11px;
+    padding: 8px 10px; border-radius: 8px;
+    font-size: 13px; color: var(--text-dim, #64748b);
+    background: transparent;
+    transition: background 160ms, color 160ms;
+  }
+  .gp-phase-icon {
+    width: 22px; height: 22px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: #f1f5f9; color: #94a3b8;
+    font-size: 12px; font-weight: 700;
+  }
+  .gp-phase-label { flex: 1; }
+  .gp-phase-meta { color: #94a3b8; font-size: 12px; font-variant-numeric: tabular-nums; }
+  /* Active — pulses */
+  .gp-phase-active {
+    background: #eef2ff; color: #0f172a; font-weight: 500;
+  }
+  .gp-phase-active .gp-phase-icon {
+    background: var(--accent, #6366f1); color: #fff;
+    animation: gp-spin 1.4s linear infinite;
+  }
+  @keyframes gp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  /* Done */
+  .gp-phase-done { color: #0f172a; }
+  .gp-phase-done .gp-phase-icon { background: #dcfce7; color: #15803d; }
+  /* Failed */
+  .gp-phase-failed { color: #b91c1c; }
+  .gp-phase-failed .gp-phase-icon { background: #fee2e2; color: #b91c1c; }
+  .gp-footnote {
+    font-size: 11.5px; color: #94a3b8; line-height: 1.5;
+    padding-top: 14px; border-top: 1px solid #f1f5f9;
+  }
 </style>
 </head>
 <body data-mode="pdf">
@@ -395,10 +477,6 @@
           </div>
           <button type="button" class="fp-remove" id="fp-remove">✕</button>
         </div>
-        <div style="margin-top:10px;padding:10px 12px;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#713f12;line-height:1.5;">
-          <strong>Heads up:</strong> the AI outlines a maximum of <strong>5 modules</strong> with <strong>5 lessons each</strong>.
-          If your PDF contains more, the content will be condensed into that structure.
-        </div>
       </div>
 
       <!-- DESCRIPTION MODE -->
@@ -416,14 +494,14 @@
             <span class="label-text">Modules</span>
             <span class="label-hint">leave empty for auto</span>
           </div>
-          <input type="number" name="moduleCount" id="moduleCount" placeholder="Auto (max 5)" min="1" />
+          <input type="number" name="moduleCount" id="moduleCount" placeholder="Auto (5)" min="1" />
         </div>
         <div class="field" style="margin-bottom:0;">
           <div class="label">
             <span class="label-text">Lessons / module</span>
             <span class="label-hint">leave empty for auto</span>
           </div>
-          <input type="number" name="lessonsPerModule" id="lessonsPerModule" placeholder="Auto (max 5)" min="1" />
+          <input type="number" name="lessonsPerModule" id="lessonsPerModule" placeholder="Auto (5)" min="1" />
         </div>
       </div>
 
@@ -456,11 +534,6 @@
         <input type="hidden" name="accent" id="accent" value="#6366f1" />
       </div>
 
-      <div style="margin:18px 0 20px;padding:12px 14px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;font-size:13px;color:#3730a3;line-height:1.5;">
-        ⏱️ <strong>Total time:</strong> a full generation with all toggles enabled runs <strong>~10-15 minutes</strong>.
-        Toggle off what you don't need — each option below is independent.
-      </div>
-
       <div class="field">
         <div class="label">
           <span class="label-text">Lesson Workbooks</span>
@@ -471,7 +544,7 @@
           <span class="toggle-track"><span class="toggle-thumb"></span></span>
           <span class="toggle-label">
             <span class="toggle-title">Generate workbook PDFs</span>
-            <span class="toggle-desc">A "Download Workbook" button gets added to each lesson page in CC360. Adds ~2-3 min to generation.</span>
+            <span class="toggle-desc">A "Download Workbook" button gets added to each lesson page in CC360.</span>
           </span>
         </label>
       </div>
@@ -486,7 +559,7 @@
           <span class="toggle-track"><span class="toggle-thumb"></span></span>
           <span class="toggle-label">
             <span class="toggle-title">Generate AI thumbnails</span>
-            <span class="toggle-desc">Friendly cartoon course cover + a thumbnail icon for every lesson, generated by OpenAI (GPT Image). Adds ~3-5 min and roughly $0.30 per course in API cost.</span>
+            <span class="toggle-desc">Friendly cartoon course cover + a thumbnail icon for every lesson, generated by OpenAI (GPT Image).</span>
           </span>
         </label>
       </div>
@@ -504,7 +577,7 @@
           <span class="toggle-track"><span class="toggle-thumb"></span></span>
           <span class="toggle-label">
             <span class="toggle-title">Generate AI funnel</span>
-            <span class="toggle-desc">Writes every section of a complete sales funnel (hero, problem/solution, modules, testimonials, pricing, FAQ, checkout, confirmation) and generates module thumbnails + a laptop mockup. Adds ~3-5 min. Requires your master funnel template wired up — see <code style="font-family:ui-monospace,monospace;">FUNNEL_SETUP.md</code>.</span>
+            <span class="toggle-desc">Writes every section of a complete sales funnel (hero, problem/solution, modules, testimonials, pricing, FAQ, checkout, confirmation) and generates module thumbnails + a laptop mockup.</span>
           </span>
         </label>
       </div>
@@ -548,20 +621,6 @@
           </div>
         </div>
 
-        <div class="field" style="margin-bottom:18px;">
-          <div class="label">
-            <span class="label-text">Dark Section Background</span>
-            <span class="label-required">required for funnel</span>
-          </div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <input type="color" id="brandDarkBgColor" value="#0A1C3D" style="width:44px; height:44px; border:1px solid var(--border-strong); border-radius:6px; padding:2px; cursor:pointer;" />
-            <input type="text" id="brandDarkBgHex" name="brandDarkBg" value="#0A1C3D" maxlength="7" pattern="^#[0-9a-fA-F]{6}$" style="flex:1; font-family:ui-monospace,monospace; text-transform:uppercase;" />
-          </div>
-          <div style="font-size:12px;color:var(--text-dim);margin-top:6px;line-height:1.5;">
-            The dark background color for hero, testimonials, FAQ, and footer sections. The brand color you picked above is used as the funnel's primary accent.
-          </div>
-        </div>
-
         <!-- Funnel Pitch — required only in PDF mode -->
         <div class="field pdf-only" style="margin-bottom:0;">
           <div class="label">
@@ -575,8 +634,12 @@
         </div>
       </div>
 
+      <div style="margin:8px 0 18px;padding:12px 14px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;font-size:13px;color:#3730a3;line-height:1.5;">
+        ⏱️ <strong>Total time:</strong> a full generation with all toggles enabled runs <strong>~10-15 minutes</strong>.
+        Toggle off what you don't need — each option above is independent.
+      </div>
+
       <div class="submit-row">
-        <div class="submit-meta">Estimated time: <strong style="color:var(--text-dim);">3–6 min</strong> <span style="opacity:0.7;">(scales with course size; thumbnails add ~2-3 min)</span></div>
         <button type="submit" class="submit" id="submit-btn">
           <span class="btn-label">Generate Outline</span>
           <span class="arrow">→</span>
@@ -698,15 +761,6 @@ function showPhoto() {
   photoPreview.classList.add('visible');
 }
 
-// ============ Color picker sync (dark bg) ============
-const darkBgColor = document.getElementById('brandDarkBgColor');
-const darkBgHex = document.getElementById('brandDarkBgHex');
-darkBgColor.addEventListener('input', () => { darkBgHex.value = darkBgColor.value.toUpperCase(); });
-darkBgHex.addEventListener('input', () => {
-  const v = darkBgHex.value.trim();
-  if (/^#[0-9a-fA-F]{6}$/.test(v)) darkBgColor.value = v.toLowerCase();
-});
-
 // ============ Form submission ============
 const form = document.getElementById('course-form');
 const submitBtn = document.getElementById('submit-btn');
@@ -737,7 +791,6 @@ form.addEventListener('submit', async (e) => {
     if (!document.getElementById('instructorName').value.trim()) return showError('Funnel: instructor first name is required');
     if (!photoInput.files.length) return showError('Funnel: instructor photo upload is required');
     if (!document.getElementById('coursePrice').value.trim()) return showError('Funnel: course price is required');
-    if (!/^#[0-9a-fA-F]{6}$/.test(darkBgHex.value.trim())) return showError('Funnel: dark section color must be a valid 6-digit hex');
     if (mode === 'pdf') {
       const pitch = document.getElementById('funnelPitch').value.trim();
       if (pitch.length < 20) return showError('Funnel: pitch must be at least 20 characters when course mode is PDF');
@@ -773,19 +826,55 @@ form.addEventListener('submit', async (e) => {
     if (funnelOn) {
       fd.append('instructorName', document.getElementById('instructorName').value.trim());
       fd.append('coursePrice', document.getElementById('coursePrice').value.trim());
-      fd.append('brandDarkBg', darkBgHex.value.trim().toUpperCase());
       fd.append('instructorPhoto', photoInput.files[0]);
       if (mode === 'pdf') {
         fd.append('funnelPitch', document.getElementById('funnelPitch').value.trim());
       }
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // Streaming generation. /api/generate now responds with NDJSON events
+    // (one per phase milestone). We open the GenProgressModal immediately,
+    // then update its state per event. On 'done' we redirect to the preview;
+    // on 'error' we show the error and re-enable the form.
+    // ─────────────────────────────────────────────────────────────────
+    GenProgress.open();
     const res = await fetch('/api/generate', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `Server error (${res.status})`);
-    // Redirect to preview page
-    window.location.href = `/preview/${data.draftId}`;
+    if (!res.ok && !res.body) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Server error (${res.status})`);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let redirectUrl = null;
+    let streamError = null;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        let ev;
+        try { ev = JSON.parse(trimmed); } catch { continue; }
+        GenProgress.handle(ev);
+        if (ev.phase === 'done')  redirectUrl = ev.redirectUrl || `/preview/${ev.draftId}`;
+        if (ev.phase === 'error') streamError = ev.error || 'Generation failed';
+      }
+    }
+    if (streamError) throw new Error(streamError);
+    if (redirectUrl) {
+      // Tiny visual beat so the user sees the "all done" state before navigating.
+      GenProgress.markAllDone();
+      setTimeout(() => { window.location.href = redirectUrl; }, 900);
+    } else {
+      throw new Error('Generation ended without a draft ID — please try again.');
+    }
   } catch (err) {
+    GenProgress.close();
     showError(err.message);
     setLoading(false);
   }
@@ -807,6 +896,150 @@ function showError(msg) {
   errorBox.textContent = msg;
   errorBox.classList.add('visible');
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// GenProgress — vanilla-JS progress modal for /api/generate streaming.
+// Shows a checklist of active phases + a rotating cheeky message while the
+// 10-15 min generation runs. No React; built into the DOM on first open.
+// ═══════════════════════════════════════════════════════════════════════
+const GenProgress = (function () {
+  // Phases that may appear (conditional on form toggles). Keys match the
+  // 'phase' values in server.js /api/generate's emit() calls.
+  const PHASES = [
+    { key: 'outline',        label: 'Designing your course outline',     doneLabel: 'Outline ready' },
+    { key: 'workbooks',      label: 'Writing lesson workbooks',          doneLabel: 'Workbooks ready' },
+    { key: 'thumbnails',     label: 'Painting AI thumbnails',            doneLabel: 'Thumbnails ready' },
+    { key: 'funnel-content', label: 'Writing your sales funnel copy',    doneLabel: 'Funnel copy ready' },
+    { key: 'funnel-images',  label: 'Generating funnel images',          doneLabel: 'Funnel images ready' },
+  ];
+  // Cheeky rotating messages — rotated every 6s
+  const MESSAGES = [
+    'Brewing your course… ☕',
+    'Teaching pixels to look professional…',
+    'Convincing the AI to be concise…',
+    'Sharpening every key takeaway…',
+    'Negotiating with the image model…',
+    'Counting commas. Eternally.',
+    'Making your funnel sound less like a robot…',
+    'Asking the cartoon characters to smile…',
+    'Quality-checking the puns. (Some made it through.)',
+    'Adding a sprinkle of conviction to the headlines…',
+    "Making sure no lesson rhymes with 'meh'…",
+    'Stress-testing every CTA button…',
+    'Bribing the thumbnails to look friendlier…',
+    'Almost there. Almost. There.',
+  ];
+
+  let root, banner, phaseListEl, progressFillEl, msgEl, msgIdx = 0, msgTimer = null;
+  let visiblePhases = [];
+  let phaseStatus = {};   // key -> 'pending' | 'active' | 'done' | 'failed'
+  let phaseDetail = {};   // key -> { done, total, failed }
+
+  function build() {
+    if (root) return;
+    root = document.createElement('div');
+    root.className = 'gen-progress-backdrop';
+    root.innerHTML = `
+      <div class="gen-progress-modal">
+        <div class="gp-icon">✨</div>
+        <h2 class="gp-title">Cooking up your course…</h2>
+        <p class="gp-sub gp-message">Brewing your course… ☕</p>
+        <div class="gp-bar"><div class="gp-bar-fill" style="width:0%"></div></div>
+        <ul class="gp-phase-list"></ul>
+        <div class="gp-footnote">This usually runs <strong>3-10 minutes</strong> depending on your toggles. Keep this tab open — the page will redirect automatically.</div>
+      </div>
+    `;
+    document.body.appendChild(root);
+    banner = root.querySelector('.gp-title');
+    msgEl  = root.querySelector('.gp-message');
+    phaseListEl = root.querySelector('.gp-phase-list');
+    progressFillEl = root.querySelector('.gp-bar-fill');
+  }
+
+  function rotateMessage() {
+    msgIdx = (msgIdx + 1) % MESSAGES.length;
+    if (msgEl) msgEl.textContent = MESSAGES[msgIdx];
+  }
+
+  function startMessageRotator() {
+    if (msgTimer) clearInterval(msgTimer);
+    // Random start so different runs feel different
+    msgIdx = Math.floor(Math.random() * MESSAGES.length);
+    if (msgEl) msgEl.textContent = MESSAGES[msgIdx];
+    msgTimer = setInterval(rotateMessage, 6000);
+  }
+
+  function determineVisiblePhases() {
+    // Always-on
+    const list = [PHASES[0]];   // outline
+    if (document.getElementById('generateWorkbooks').checked) list.push(PHASES[1]);
+    if (document.getElementById('generateThumbnails').checked) list.push(PHASES[2]);
+    if (funnelToggle.checked) { list.push(PHASES[3]); list.push(PHASES[4]); }
+    return list;
+  }
+
+  function renderList() {
+    phaseListEl.innerHTML = visiblePhases.map(p => {
+      const st = phaseStatus[p.key] || 'pending';
+      const det = phaseDetail[p.key];
+      let progressHint = '';
+      if (st === 'active' && det?.total) {
+        progressHint = `<span class="gp-phase-meta">${det.done ?? 0} / ${det.total}</span>`;
+      } else if (st === 'done' && det?.total) {
+        progressHint = `<span class="gp-phase-meta">${det.total - (det.failed || 0)} / ${det.total}</span>`;
+      }
+      const icon = st === 'done' ? '✓' : st === 'failed' ? '⚠' : st === 'active' ? '↻' : '·';
+      const labelText = st === 'done' ? p.doneLabel : p.label;
+      return `<li class="gp-phase gp-phase-${st}">
+        <span class="gp-phase-icon">${icon}</span>
+        <span class="gp-phase-label">${labelText}</span>
+        ${progressHint}
+      </li>`;
+    }).join('');
+    // Progress bar: count done/failed/active as fractional progress
+    const done = visiblePhases.filter(p => phaseStatus[p.key] === 'done' || phaseStatus[p.key] === 'failed').length;
+    const active = visiblePhases.filter(p => phaseStatus[p.key] === 'active').length;
+    const pct = Math.min(100, Math.round(((done + active * 0.5) / visiblePhases.length) * 100));
+    progressFillEl.style.width = pct + '%';
+  }
+
+  return {
+    open() {
+      build();
+      visiblePhases = determineVisiblePhases();
+      phaseStatus = {};
+      phaseDetail = {};
+      for (const p of visiblePhases) phaseStatus[p.key] = 'pending';
+      renderList();
+      root.classList.add('visible');
+      startMessageRotator();
+    },
+    handle(ev) {
+      if (!ev || !ev.phase) return;
+      const key = ev.phase;
+      if (!visiblePhases.find(p => p.key === key)) return;   // unknown phase, ignore
+      if (ev.status === 'start')    phaseStatus[key] = 'active';
+      if (ev.status === 'progress') {
+        phaseStatus[key] = 'active';
+        phaseDetail[key] = { done: ev.done, total: ev.total, failed: ev.failed };
+      }
+      if (ev.status === 'done')   { phaseStatus[key] = 'done';
+                                    phaseDetail[key] = { total: ev.total, failed: ev.failed }; }
+      if (ev.status === 'failed') { phaseStatus[key] = 'failed'; }
+      renderList();
+    },
+    markAllDone() {
+      for (const p of visiblePhases) if (phaseStatus[p.key] !== 'failed') phaseStatus[p.key] = 'done';
+      renderList();
+      if (msgEl) msgEl.textContent = 'All done! Loading your preview…';
+      if (banner) banner.textContent = 'Your course is ready ✨';
+    },
+    close() {
+      if (msgTimer) { clearInterval(msgTimer); msgTimer = null; }
+      if (root) root.classList.remove('visible');
+    },
+  };
+})();
 </script>
 </body>
 </html>

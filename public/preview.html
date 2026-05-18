@@ -467,6 +467,20 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
 
+  /* Funnel preview — rendered as an embedded iframe of funnel-visual-preview.html
+     so we get the polished click-to-edit visual preview without duplicating
+     the markup here. The visual preview detects ?embedded=1 and hides its
+     own header chrome (back nav, brand, push button) — the parent owns those. */
+  .funnel-iframe-wrap {
+    height: calc(100vh - 60px);
+    background: var(--bg);
+  }
+  .funnel-iframe {
+    width: 100%; height: 100%;
+    border: 0;
+    display: block;
+  }
+
   /* Funnel editor */
   .funnel-view {
     height: calc(100vh - 60px);
@@ -1344,16 +1358,15 @@ useEffect(() => {
       )}
 
       {activeView === 'funnel' && funnel && (
-        <FunnelView
-          funnel={funnel}
-          draftId={draftId}
-          step={funnelStep}
-          setStep={setFunnelStep}
-          openSections={openFunnelSections}
-          toggleSection={toggleFunnelSection}
-          setField={setFunnelField}
-          setInput={setFunnelInputField}
-        />
+        <div className="funnel-iframe-wrap">
+          <iframe
+            className="funnel-iframe"
+            src={`/funnel-visual-preview.html?draft=${draftId}&embedded=1`}
+            title="Funnel Preview"
+            // Allow same-origin so the iframe can talk to /api/draft for auto-save
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          />
+        </div>
       )}
 
       {loading && (

@@ -1136,6 +1136,45 @@ app.post('/api/push/:draftId', async (req, res) => {
     if (draft.funnelContent) {
       emit({ phase: 'funnel', status: 'start' });
 
+      // ────────────────────────────────────────────────────────────────
+      // 4-pre. Apply the chosen theme's funnel template to the sub-account.
+      // Mirrors the same step in /api/funnel-only/push — uses GHL's
+      // "clone funnel to locations" share endpoint (bit-perfect copy).
+      // Without this, the customValues + images get pushed but there's
+      // no themed funnel page to render them into.
+      //
+      // Failure here is non-fatal: customValues + images still go through
+      // so if a themed funnel already exists in the sub-account (e.g. from
+      // a previous push), it picks up the updated content.
+      // ────────────────────────────────────────────────────────────────
+      const themeKey = isValidTheme(draft.input.theme) ? draft.input.theme : DEFAULT_THEME;
+      const theme = getTheme(themeKey);
+      const cloneFunnelName = `CC360 AI Funnel Template (${theme.name}-Theme)`;
+      emit({ phase: 'theme-snapshot', status: 'start', theme: themeKey, funnelId: theme.funnelId });
+      try {
+        if (!theme.funnelId) {
+          throw new Error(`Theme "${themeKey}" has no funnelId mapped in lib/funnel-themes.js.`);
+        }
+        const userAuth = await getActiveUserJwt();
+        if (!userAuth?.jwt) {
+          throw new Error('No User JWT available — paste one at /setup or open CC360 in a tab so the snippet syncs one.');
+        }
+        const cloneResult = await cloneFunnelToLocations({
+          funnelId: theme.funnelId,
+          funnelName: cloneFunnelName,
+          targetLocationIds: draftLocationId,
+          userJwt: userAuth.jwt,
+          tokenId: userAuth.tokenId,
+        });
+        console.log(`   ✓ Funnel ${theme.funnelId} (${themeKey}) cloned to ${draftLocationId} as "${cloneFunnelName}"; traceId=${cloneResult.traceId || '?'}`);
+        emit({ phase: 'theme-snapshot', status: 'propagating' });
+        await waitForCloneVisibility(4000);
+        emit({ phase: 'theme-snapshot', status: 'done', theme: themeKey, funnelName: cloneFunnelName });
+      } catch (e) {
+        console.warn(`   ⚠ Funnel clone failed (continuing with values push): ${e.message}`);
+        emit({ phase: 'theme-snapshot', status: 'failed', error: e.message, note: 'Continuing — any existing themed funnel in this sub-account will still receive updated content via customValues' });
+      }
+
       // 4a. Upload instructor photo
       let instructorPhotoUrl = null;
       if (draft.instructorPhoto?.buffer) {
@@ -2016,48 +2055,44 @@ app.post('/api/funnel-only/push/:draftId', async (req, res) => {
     }
 
     // ────────────────────────────────────────────────────────────────
-    // STEP A — Apply the chosen theme's snapshot to the sub-account.
-    // Uses the agency admin's User JWT (NOT OAuth) — the snapshot
-    // endpoint lives on backend.leadconnectorhq.com and only accepts
-    // User-authClass tokens. Same auth pair as thumbnail-attach.
-    // If no theme was picked, default to Ocean.
-    // If snapshot import fails, we continue with the customValues push
-    // anyway — the assumption is the themed funnel may already exist
-    // from a previous push (e.g. on re-pushes, or after manual import).
+    // STEP A — Apply the chosen theme's funnel template to the sub-account.
+    // Uses GHL's "clone funnel to locations" share endpoint (the same path
+    // the UI uses when you click "Share Funnel → Import to Sub-Account").
+    // This replaces the older snapshot-load approach, which produced funnels
+    // with missing elements (page-builder widgets, custom HTML blocks, etc.).
+    // The share-clone path is bit-perfect.
+    //
+    // Auth: User JWT only — the endpoint doesn't require token-id (unlike
+    // snapshot-load). If the JWT is missing/expired, the rest of the push
+    // still continues so customValues + images can be retried on a fresh
+    // push, and any existing themed funnel in the sub-account stays valid.
     // ────────────────────────────────────────────────────────────────
     const themeKey = isValidTheme(draft.input.theme) ? draft.input.theme : DEFAULT_THEME;
     const theme = getTheme(themeKey);
-    emit({ phase: 'theme-snapshot', status: 'start', theme: themeKey, snapshotId: theme.snapshotId });
+    const cloneFunnelName = `CC360 AI Funnel Template (${theme.name}-Theme)`;
+    emit({ phase: 'theme-snapshot', status: 'start', theme: themeKey, funnelId: theme.funnelId });
     try {
+      if (!theme.funnelId) {
+        throw new Error(`Theme "${themeKey}" has no funnelId mapped in lib/funnel-themes.js. Update it or pass a different theme.`);
+      }
       const userAuth = await getActiveUserJwt();
       if (!userAuth?.jwt) {
         throw new Error('No User JWT available — paste one at /setup or open CC360 in a tab so the snippet syncs one.');
       }
-      // companyId for the snapshot endpoint: decode it from the User JWT's
-      // Firebase token-id payload (contains `company_id`), with a fallback
-      // to the OAuth install record if for some reason the JWT lacks it.
-      let companyId = null;
-      try { companyId = decodeJwtPayload(userAuth.tokenId || userAuth.jwt)?.company_id || null; } catch {}
-      if (!companyId) {
-        try { companyId = (await resolveCompanyToken(locationId))?.companyId || null; } catch {}
-      }
-      if (!companyId) {
-        throw new Error('Could not determine agency companyId for snapshot load.');
-      }
-      const loadResult = await loadSnapshotToLocation({
-        snapshotId: theme.snapshotId,
-        locationId,
-        companyId,
+      const cloneResult = await cloneFunnelToLocations({
+        funnelId: theme.funnelId,
+        funnelName: cloneFunnelName,
+        targetLocationIds: locationId,
         userJwt: userAuth.jwt,
         tokenId: userAuth.tokenId,
       });
-      console.log(`   ✓ Snapshot ${theme.snapshotId} (${themeKey}) applied to ${locationId}; counts=${JSON.stringify(loadResult.assetCounts)}`);
+      console.log(`   ✓ Funnel ${theme.funnelId} (${themeKey}) cloned to ${locationId} as "${cloneFunnelName}"; traceId=${cloneResult.traceId || '?'}`);
       emit({ phase: 'theme-snapshot', status: 'propagating' });
-      await waitForSnapshotPropagation(8000);
-      emit({ phase: 'theme-snapshot', status: 'done', theme: themeKey });
+      await waitForCloneVisibility(4000);
+      emit({ phase: 'theme-snapshot', status: 'done', theme: themeKey, funnelName: cloneFunnelName });
     } catch (e) {
-      console.warn(`   ⚠ Snapshot load failed (continuing with values push): ${e.message}`);
-      emit({ phase: 'theme-snapshot', status: 'failed', error: e.message, note: 'Continuing — snapshot may already be applied' });
+      console.warn(`   ⚠ Funnel clone failed (continuing with values push): ${e.message}`);
+      emit({ phase: 'theme-snapshot', status: 'failed', error: e.message, note: 'Continuing — existing themed funnel in this sub-account will still receive updated content via customValues' });
     }
 
     // Upload instructor photo

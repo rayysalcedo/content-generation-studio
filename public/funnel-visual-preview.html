@@ -1302,6 +1302,7 @@ function App() {
   const [pushing, setPushing]   = useState(false);
   const [locationId, setLocationId] = useState(null);
   const [imageKeys, setImageKeys] = useState(() => new Set());
+  const [hasCourse, setHasCourse] = useState(false);            // route push to /api/push vs /api/funnel-only/push
   const saveTimer = useRef(null);
 
   const theme = THEMES[themeKey];
@@ -1324,6 +1325,10 @@ function App() {
         if (data.funnel.input?.theme && THEMES[data.funnel.input.theme]) {
           setThemeKey(data.funnel.input.theme);
         }
+        // A draft has a course if data.structure (the course outline) is present.
+        // Funnel-only drafts have no structure. This determines which push
+        // endpoint we call: /api/push (full course+funnel) vs /api/funnel-only/push.
+        setHasCourse(!!(data.structure && Array.isArray(data.structure.modules) && data.structure.modules.length > 0));
       })
       .catch(e => showToast(e.message, true))
       .finally(() => setLoading(false));
@@ -1377,13 +1382,22 @@ function App() {
       showToast('Standalone preview — connect to a draft to push.', true);
       return;
     }
-    if (!confirm(`Apply the ${theme.name} theme template and push content to CC360?`)) return;
+    // Smart-route: if this draft has a course, hit the full push endpoint
+    // (which now also runs the theme-clone phase). Funnel-only drafts go
+    // to the funnel-only endpoint, which already had the theme-clone phase.
+    const pushUrl = hasCourse
+      ? `/api/push/${draftId}`
+      : `/api/funnel-only/push/${draftId}`;
+    const confirmMsg = hasCourse
+      ? `This will push BOTH your course AND the ${theme.name}-themed funnel to CC360. Ready to proceed?`
+      : `Apply the ${theme.name} theme template and push funnel content to CC360?`;
+    if (!confirm(confirmMsg)) return;
     setPushEvents([]);
     setPushOpen(true);
     setPushDone(false);
     setPushing(true);
     try {
-      const res = await fetch(`/api/funnel-only/push/${draftId}`, { method: 'POST' });
+      const res = await fetch(pushUrl, { method: 'POST' });
       if (!res.ok && !res.body) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Push failed (HTTP ${res.status})`);

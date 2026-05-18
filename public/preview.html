@@ -436,28 +436,35 @@
   /* ============== Unified: Tab bar + Funnel editor + Progress ============== */
   .tab-bar {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     background: var(--surface-2);
-    border-radius: 6px;
-    padding: 3px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
   }
   .tab-bar button {
     background: transparent;
     border: none;
-    padding: 7px 14px;
-    border-radius: 4px;
+    padding: 9px 18px;
+    border-radius: 6px;
     font-family: var(--sans);
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--text-dim);
     cursor: pointer;
-    transition: all 0.1s;
+    transition: all 0.12s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
   }
-  .tab-bar button:hover { color: var(--text); }
+  .tab-bar button:hover {
+    color: var(--text);
+    background: rgba(0,0,0,0.03);
+  }
   .tab-bar button.active {
     background: var(--surface);
-    color: var(--text);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    color: var(--accent);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
 
   /* Funnel editor */
@@ -468,6 +475,27 @@
     padding: 24px 32px 96px;
   }
   .funnel-view-inner { max-width: 880px; margin: 0 auto; }
+  .visual-preview-cta {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    background: linear-gradient(135deg, #eef2ff 0%, #fdf4ff 100%);
+    border: 1px solid #c7d2fe;
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s;
+  }
+  .visual-preview-cta:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  }
+  .vpc-icon { font-size: 24px; line-height: 1; }
+  .vpc-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .vpc-text strong { font-size: 14px; font-weight: 600; color: var(--text); }
+  .vpc-sub { font-size: 12px; color: var(--text-dim); line-height: 1.45; }
+  .vpc-arrow { font-size: 18px; color: var(--accent); }
   .funnel-step-bar {
     display: flex;
     align-items: center;
@@ -639,6 +667,70 @@
   }
 
   /* Streaming push progress overlay */
+  .push-confirm-backdrop {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    animation: pcFadeIn 160ms ease-out;
+  }
+  @keyframes pcFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .push-confirm-modal {
+    background: var(--surface);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 520px;
+    padding: 28px 28px 22px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.32);
+    animation: pcSlideUp 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes pcSlideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .push-confirm-icon { font-size: 38px; line-height: 1; margin-bottom: 8px; }
+  .push-confirm-title {
+    font-family: var(--display); font-size: 22px; font-weight: 500;
+    margin: 0 0 8px;
+  }
+  .push-confirm-subtitle {
+    margin: 0 0 18px; font-size: 14px; color: var(--text-dim); line-height: 1.5;
+  }
+  .push-confirm-checklist {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .pc-item { display: flex; gap: 12px; align-items: flex-start; }
+  .pc-tick {
+    flex-shrink: 0;
+    width: 22px; height: 22px;
+    background: #dcfce7; color: #15803d;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    margin-top: 1px;
+  }
+  .pc-item-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .pc-item-sub { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
+  .push-confirm-warning {
+    margin: 0 0 18px; padding: 10px 12px;
+    background: #fef9c3; border: 1px solid #fde68a; border-radius: 8px;
+    font-size: 12px; color: #713f12; line-height: 1.5;
+  }
+  .push-confirm-actions {
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
+  .push-confirm-actions .btn-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .push-confirm-actions .btn-ghost:hover {
+    background: var(--bg);
+    color: var(--text);
+  }
+
   .push-overlay {
     position: fixed; inset: 0; z-index: 200;
     background: rgba(0, 0, 0, 0.4);
@@ -733,6 +825,7 @@ function App() {
   const [pushEvents, setPushEvents] = useState([]);           // streaming progress events
   const [pushOpen, setPushOpen] = useState(false);
   const [pushDone, setPushDone] = useState(false);
+  const [pushConfirmOpen, setPushConfirmOpen] = useState(false);    // pre-push confirmation modal
 
   // Initial load
   useEffect(() => {
@@ -886,10 +979,16 @@ useEffect(() => {
     }
   }
 
-  // Push to CC360 — streams NDJSON progress events
-  async function pushToCC360() {
-    const what = funnel ? 'course AND funnel' : 'course';
-    if (!confirm(`Push this ${what} to CC360? This will create the course${funnel ? ' and populate the funnel custom values' : ''} in your sub-account.`)) return;
+  // Push to CC360 — streams NDJSON progress events.
+  // Two-step: requestPush() opens a polished confirmation modal so the user
+  // can review what's about to happen (course + funnel together); confirmPush()
+  // is what actually fires the POST and consumes the stream.
+  function requestPush() {
+    setPushConfirmOpen(true);
+  }
+
+  async function confirmPush() {
+    setPushConfirmOpen(false);
     setPushEvents([]);
     setPushOpen(true);
     setPushDone(false);
@@ -983,8 +1082,8 @@ useEffect(() => {
         </div>
         {funnel && (
           <div className="tab-bar" style={{ marginLeft: 18 }}>
-            <button className={activeView === 'course' ? 'active' : ''} onClick={() => setActiveView('course')}>Course Preview</button>
-            <button className={activeView === 'funnel' ? 'active' : ''} onClick={() => setActiveView('funnel')}>AI Funnel Preview</button>
+            <button className={activeView === 'course' ? 'active' : ''} onClick={() => setActiveView('course')}>📚 Course Preview</button>
+            <button className={activeView === 'funnel' ? 'active' : ''} onClick={() => setActiveView('funnel')}>🎯 Funnel Preview</button>
           </div>
         )}
         <div className="header-spacer"></div>
@@ -995,7 +1094,7 @@ useEffect(() => {
           </button>
           {pushed
             ? <a className="btn btn-accent" href={pushed.url} target="_blank" rel="noopener" style={{ textDecoration: 'none' }}>↗ Open in CC360</a>
-            : <button className="btn btn-primary" onClick={pushToCC360} disabled={loading}>
+            : <button className="btn btn-primary" onClick={requestPush} disabled={loading}>
                 ✓ Push to CC360
               </button>
           }
@@ -1264,6 +1363,15 @@ useEffect(() => {
         </div>
       )}
 
+      {pushConfirmOpen && (
+        <PushConfirmModal
+          hasFunnel={!!funnel}
+          courseTitle={draft?.courseTitle || 'this course'}
+          onConfirm={confirmPush}
+          onCancel={() => setPushConfirmOpen(false)}
+        />
+      )}
+
       {pushOpen && (
         <PushOverlay
           events={pushEvents}
@@ -1316,6 +1424,20 @@ function FunnelView({ funnel, draftId, step, setStep, openSections, toggleSectio
   return (
     <div className="funnel-view">
       <div className="funnel-view-inner">
+        <a
+          href={`/funnel-visual-preview.html?draft=${draftId}`}
+          target="_blank"
+          rel="noopener"
+          className="visual-preview-cta"
+        >
+          <span className="vpc-icon">🎨</span>
+          <span className="vpc-text">
+            <strong>Open Visual Funnel Preview</strong>
+            <span className="vpc-sub">See the funnel rendered as it'll appear in CC360 — fully styled, click-to-edit. Opens in a new tab.</span>
+          </span>
+          <span className="vpc-arrow">↗</span>
+        </a>
+
         <div className="funnel-step-bar">
           <span className="funnel-step-label">Funnel Step</span>
           <select className="funnel-step-select" value={step} onChange={e => setStep(e.target.value)}>
@@ -1525,6 +1647,57 @@ function FunnelView({ funnel, draftId, step, setStep, openSections, toggleSectio
             <div className="funnel-fixed-note">ℹ︎ The green checkmark and people-at-computer illustrations are fixed defaults — not changed by push.</div>
           </FunnelSection>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PushConfirmModal — pre-flight confirmation before pushing to CC360
+// Lays out what's about to happen (course + funnel together) and gives
+// the user a chance to back out and keep editing.
+// ============================================================
+function PushConfirmModal({ hasFunnel, courseTitle, onConfirm, onCancel }) {
+  return (
+    <div className="push-confirm-backdrop" onClick={onCancel}>
+      <div className="push-confirm-modal" onClick={e => e.stopPropagation()}>
+        <div className="push-confirm-icon">🚀</div>
+        <h2 className="push-confirm-title">Ready to push to CC360?</h2>
+        <p className="push-confirm-subtitle">
+          {hasFunnel
+            ? <>This will push <strong>both your course AND your AI funnel</strong> to your sub-account in one go.</>
+            : <>This will push <strong>your course</strong> to your sub-account.</>
+          }
+        </p>
+        <div className="push-confirm-checklist">
+          <div className="pc-item">
+            <span className="pc-tick">✓</span>
+            <div>
+              <div className="pc-item-title">Course "{courseTitle}"</div>
+              <div className="pc-item-sub">Modules, lessons, thumbnails (if generated), workbook PDFs (if generated)</div>
+            </div>
+          </div>
+          {hasFunnel && (
+            <div className="pc-item">
+              <span className="pc-tick">✓</span>
+              <div>
+                <div className="pc-item-title">Themed AI funnel</div>
+                <div className="pc-item-sub">Clones the funnel template + uploads instructor photo + writes all funnel copy as custom values</div>
+              </div>
+            </div>
+          )}
+        </div>
+        <p className="push-confirm-warning">
+          Once it starts, the push runs for a few minutes. Make sure your content is finalized before proceeding.
+        </p>
+        <div className="push-confirm-actions">
+          <button className="btn btn-ghost" onClick={onCancel}>
+            ← Not yet — let me modify
+          </button>
+          <button className="btn btn-primary" onClick={onConfirm}>
+            Yes, push to CC360 →
+          </button>
+        </div>
       </div>
     </div>
   );

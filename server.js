@@ -25,7 +25,7 @@ import {
 } from './lib/oauth.js';
 import { store as tokenStore, backendName as tokenStoreBackend } from './lib/token-store.js';
 // --- Funnel tool: AI-generated 3-step funnel (sales / checkout / confirmation) ---
-import { generateFunnelContent, flattenToCustomValueMap } from './lib/generate-funnel.js';
+import { generateFunnelContent, flattenToCustomValueMap, nestedToFlatPreview, flatPreviewToNested } from './lib/generate-funnel.js';
 import { generateFunnelImages } from './lib/generate-funnel-images.js';
 import { pushCustomValues, uploadFunnelImages, uploadInstructorPhoto } from './lib/funnel-push.js';
 import { loadSnapshotToLocation, waitForSnapshotPropagation } from './lib/snapshot-push.js';
@@ -780,8 +780,13 @@ app.put('/api/draft/:draftId', (req, res) => {
   const { structure, accent, funnelContent, brandPrimary, brandDarkBg, coursePrice, theme } = req.body;
   if (structure) draft.structure = structure;
   if (accent) draft.input.accent = accent;
-  // Funnel edits
-  if (funnelContent) draft.funnelContent = funnelContent;
+  // Funnel edits — preview sends FLAT shape; convert back to nested so the
+  // push pipeline (flattenToCustomValueMap) continues to see its expected shape.
+  // Preserve any fields the preview doesn't edit by passing the existing
+  // funnelContent as the base.
+  if (funnelContent && typeof funnelContent === 'object') {
+    draft.funnelContent = flatPreviewToNested(funnelContent, draft.funnelContent || {});
+  }
   if (brandPrimary && /^#[0-9a-fA-F]{6}$/.test(brandPrimary)) draft.input.brandPrimary = brandPrimary;
   if (brandDarkBg && /^#[0-9a-fA-F]{6}$/.test(brandDarkBg)) draft.input.brandDarkBg = brandDarkBg;
   if (typeof coursePrice === 'string') draft.input.coursePrice = coursePrice;
@@ -1267,12 +1272,18 @@ app.get('/api/draft/:draftId', (req, res) => {
     // Funnel data
     funnel: {
       generated: !!draft.funnelContent,
-      content: draft.funnelContent || null,
+      // The interactive preview consumes a FLAT shape. We always convert from
+      // the canonical nested funnelContent at the response boundary so the
+      // server-side data structure stays consistent with flattenToCustomValueMap.
+      content: draft.funnelContent
+        ? nestedToFlatPreview(draft.funnelContent, draft.input || {})
+        : null,
       input: {
         instructorName: draft.input.instructorName || '',
         coursePrice: draft.input.coursePrice || '',
         brandPrimary: draft.input.brandPrimary || draft.input.accent || '#6366f1',
         brandDarkBg: draft.input.brandDarkBg || '#0A1C3D',
+        theme: draft.input.theme || null,
       },
       imageStats: draft.funnelImageStats || null,
       imageKeys: funnelImageKeys,

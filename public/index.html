@@ -212,6 +212,51 @@
   }
   .swatch:hover { transform: scale(1.1); }
   .swatch.selected { border-color: var(--text); }
+  /* Custom-hex "+" swatch */
+  .swatch-custom {
+    background: #fff;
+    border: 2px dashed var(--border-strong, #cbd5e1);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--text-dim, #64748b);
+  }
+  .swatch-custom .swatch-custom-icon { font-size: 18px; font-weight: 400; line-height: 1; }
+  .swatch-custom:hover {
+    border-color: var(--text);
+    color: var(--text);
+    background: var(--accent-soft, #eef2ff);
+  }
+  .swatch-custom.selected {
+    border-style: solid;
+    border-color: var(--text);
+  }
+  /* Custom hex inline editor — only shown after clicking the + swatch */
+  .custom-hex-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--bg-soft, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+  }
+  .custom-hex-row input[type="color"] {
+    width: 36px; height: 36px;
+    border: 1px solid var(--border-strong, #cbd5e1);
+    border-radius: 6px;
+    padding: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .custom-hex-row input[type="text"] {
+    width: 110px;
+    font-family: ui-monospace, monospace;
+    text-transform: uppercase;
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+  .custom-hex-hint {
+    font-size: 11.5px; color: var(--text-dim, #64748b); line-height: 1.4;
+    flex: 1;
+  }
 
   /* Workbook toggle */
   .workbook-toggle {
@@ -520,18 +565,21 @@
           <span class="label-hint">applies to lesson design</span>
         </div>
         <div class="swatches" id="swatches">
-          <button type="button" class="swatch selected" data-color="#6366f1" style="background:#6366f1;"></button>
-          <button type="button" class="swatch" data-color="#0ea5e9" style="background:#0ea5e9;"></button>
-          <button type="button" class="swatch" data-color="#10b981" style="background:#10b981;"></button>
-          <button type="button" class="swatch" data-color="#dc2626" style="background:#dc2626;"></button>
-          <button type="button" class="swatch" data-color="#ea580c" style="background:#ea580c;"></button>
-          <button type="button" class="swatch" data-color="#f59e0b" style="background:#f59e0b;"></button>
-          <button type="button" class="swatch" data-color="#d946ef" style="background:#d946ef;"></button>
-          <button type="button" class="swatch" data-color="#8b5cf6" style="background:#8b5cf6;"></button>
-          <button type="button" class="swatch" data-color="#ec4899" style="background:#ec4899;"></button>
-          <button type="button" class="swatch" data-color="#0f172a" style="background:#0f172a;"></button>
+          <button type="button" class="swatch selected" data-color="#2563eb" title="Ocean"   style="background:#2563eb;"></button>
+          <button type="button" class="swatch"          data-color="#10b981" title="Emerald" style="background:#10b981;"></button>
+          <button type="button" class="swatch"          data-color="#f59e0b" title="Amber"   style="background:#f59e0b;"></button>
+          <button type="button" class="swatch"          data-color="#f43f5e" title="Rose"    style="background:#f43f5e;"></button>
+          <button type="button" class="swatch"          data-color="#475569" title="Slate"   style="background:#475569;"></button>
+          <button type="button" class="swatch swatch-custom" id="swatchCustom" title="Custom hex" aria-label="Custom hex color">
+            <span class="swatch-custom-icon">+</span>
+          </button>
         </div>
-        <input type="hidden" name="accent" id="accent" value="#6366f1" />
+        <div class="custom-hex-row" id="customHexRow" style="display:none;">
+          <input type="color" id="accentColorPicker" value="#2563eb" />
+          <input type="text" id="accentHexInput" value="#2563EB" maxlength="7" pattern="^#[0-9a-fA-F]{6}$" placeholder="#RRGGBB" />
+          <span class="custom-hex-hint">Custom hex applies to lesson pages only — funnel uses its own theme.</span>
+        </div>
+        <input type="hidden" name="accent" id="accent" value="#2563eb" />
       </div>
 
       <div class="field">
@@ -713,14 +761,55 @@ function showFile() {
 }
 
 // ============ Color swatches ============
+// ============ Brand color picker (5 theme swatches + custom hex) ============
 const swatches = document.querySelectorAll('.swatch');
 const accentInput = document.getElementById('accent');
+const customHexRow = document.getElementById('customHexRow');
+const swatchCustom = document.getElementById('swatchCustom');
+const accentColorPicker = document.getElementById('accentColorPicker');
+const accentHexInput = document.getElementById('accentHexInput');
+
+function selectSwatch(el) {
+  swatches.forEach(x => x.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function setAccent(hex) {
+  accentInput.value = hex;
+  accentColorPicker.value = hex.toLowerCase();
+  accentHexInput.value = hex.toUpperCase();
+}
+
+// Theme swatches — close the custom-hex row if it was open
 swatches.forEach(s => {
+  if (s.id === 'swatchCustom') return;
   s.addEventListener('click', () => {
-    swatches.forEach(x => x.classList.remove('selected'));
-    s.classList.add('selected');
-    accentInput.value = s.dataset.color;
+    selectSwatch(s);
+    setAccent(s.dataset.color);
+    customHexRow.style.display = 'none';
   });
+});
+
+// Custom swatch — open the hex row, mark itself selected
+swatchCustom.addEventListener('click', () => {
+  selectSwatch(swatchCustom);
+  customHexRow.style.display = 'flex';
+  accentHexInput.focus();
+  accentHexInput.select();
+});
+
+// Color picker → hex input → hidden accent input
+accentColorPicker.addEventListener('input', () => {
+  const v = accentColorPicker.value.toUpperCase();
+  accentHexInput.value = v;
+  accentInput.value = v;
+});
+accentHexInput.addEventListener('input', () => {
+  const v = accentHexInput.value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+    accentColorPicker.value = v.toLowerCase();
+    accentInput.value = v.toUpperCase();
+  }
 });
 
 // ============ Funnel toggle: show/hide funnel fields ============

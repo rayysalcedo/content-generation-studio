@@ -29,6 +29,7 @@ import { generateFunnelContent, flattenToCustomValueMap, nestedToFlatPreview, fl
 import { generateFunnelImages } from './lib/generate-funnel-images.js';
 import { pushCustomValues, uploadFunnelImages, uploadInstructorPhoto } from './lib/funnel-push.js';
 import { loadSnapshotToLocation, waitForSnapshotPropagation } from './lib/snapshot-push.js';
+import { cloneFunnelToLocations, waitForCloneVisibility } from './lib/funnel-share-push.js';
 import { THEMES, DEFAULT_THEME, getTheme, isValidTheme } from './lib/funnel-themes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1637,6 +1638,77 @@ app.post('/api/test-snapshot-load', async (req, res) => {
     });
   }
 });
+
+// ---------------------------------------------------------------------
+// Test endpoint: clone a funnel into a target sub-account via the SHARE
+// endpoint (instead of snapshot loading). Produces a bit-perfect copy of
+// the funnel — no missing elements. Zero AI cost.
+//
+// POST /api/test-funnel-share
+//   body: { locationId, themeKey?, funnelId?, funnelName? }
+// ---------------------------------------------------------------------
+app.post('/api/test-funnel-share', async (req, res) => {
+  const t0 = Date.now();
+  try {
+    const { locationId, themeKey, funnelId: funnelIdOverride, funnelName: funnelNameOverride } = req.body || {};
+    if (!locationId) return res.status(400).json({ error: 'locationId is required' });
+    if (!isValidLocationId(locationId)) return res.status(400).json({ error: 'locationId looks malformed' });
+
+    const themeKeyToUse = isValidTheme(themeKey) ? themeKey : DEFAULT_THEME;
+    const theme = getTheme(themeKeyToUse);
+    const funnelIdToUse = funnelIdOverride || theme.funnelId;
+    if (!funnelIdToUse) {
+      return res.status(400).json({ error: `Theme "${themeKeyToUse}" has no funnelId mapped, and none provided in body.` });
+    }
+    const funnelNameToUse = funnelNameOverride || `CC360 AI Funnel Template (${theme.name}-Theme)`;
+
+    const userAuth = await getActiveUserJwt();
+    if (!userAuth?.jwt) {
+      return res.status(400).json({ error: 'No User JWT available. Paste one at /setup.' });
+    }
+
+    // Diagnostics
+    const jwtPayload = decodeJwtPayload(userAuth.jwt) || {};
+    const tokenIdPayload = decodeJwtPayload(userAuth.tokenId) || {};
+    const jwtMinLeft = jwtPayload.exp ? Math.round((jwtPayload.exp * 1000 - Date.now()) / 60000) : null;
+    const tidMinLeft = tokenIdPayload.exp ? Math.round((tokenIdPayload.exp * 1000 - Date.now()) / 60000) : null;
+    const tokenIdLocations = Array.isArray(tokenIdPayload.locations) ? tokenIdPayload.locations : null;
+    const targetInTokenLocations = tokenIdLocations ? tokenIdLocations.includes(locationId) : null;
+
+    const result = await cloneFunnelToLocations({
+      funnelId: funnelIdToUse,
+      funnelName: funnelNameToUse,
+      targetLocationIds: locationId,
+      userJwt: userAuth.jwt,
+      tokenId: userAuth.tokenId,
+    });
+
+    res.json({
+      ok: true,
+      theme: themeKeyToUse,
+      funnelId: funnelIdToUse,
+      funnelName: funnelNameToUse,
+      locationId,
+      elapsedMs: Date.now() - t0,
+      jwt: {
+        minutesRemaining: jwtMinLeft,
+        hasTokenId: !!userAuth.tokenId,
+        tokenIdMinutesRemaining: tidMinLeft,
+        targetInTokenLocations,            // null if no token-id, true/false otherwise
+        tokenLocationCount: tokenIdLocations ? tokenIdLocations.length : null,
+      },
+      ...result,
+    });
+  } catch (e) {
+    res.status(500).json({
+      ok: false,
+      elapsedMs: Date.now() - t0,
+      error: e.message,
+    });
+  }
+});
+
+
 
 
 // ---------------------------------------------------------------------

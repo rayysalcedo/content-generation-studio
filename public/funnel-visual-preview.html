@@ -550,6 +550,117 @@
   }
 
   /* ═══════════════════════════════════════════════════
+     REAL IMAGE STYLES — match CC360 funnel rendering
+     ═══════════════════════════════════════════════════ */
+  .hero-video {
+    position: relative;
+    aspect-ratio: 16/10;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #0f172a;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+  }
+  .hero-video-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  .hero-video-play {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 48px;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    pointer-events: none;
+  }
+
+  .as-seen-logo-img {
+    height: 32px; width: auto; max-width: 140px;
+    object-fit: contain;
+    filter: grayscale(1) opacity(0.7);
+    transition: filter 250ms ease;
+  }
+  .as-seen-logo-img:hover { filter: grayscale(0) opacity(1); }
+
+  .inside-card-icon-img {
+    width: 72px; height: 72px;
+    margin: 0 auto 22px;
+    display: block;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  .testimonial-avatar-img {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    margin: 16px auto 0;
+    display: block;
+    object-fit: cover;
+  }
+  .testimonial-success-img {
+    width: 100%; aspect-ratio: 4/3;
+    margin-top: 18px;
+    border-radius: 10px;
+    object-fit: cover;
+    display: block;
+  }
+  .testimonial-card .stars5 {
+    display: block; text-align: center;
+    margin-bottom: 14px;
+    letter-spacing: 2px;
+  }
+
+  .module-card-img {
+    width: 100%;
+    aspect-ratio: 3/4;
+    object-fit: cover;
+    display: block;
+    background: var(--t-primary-tint);
+  }
+
+  .pricing-laptop-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    margin-top: 32px;
+    object-fit: contain;
+    display: block;
+  }
+  .featured-testimonial-img {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .instructor-photo-img {
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: 460px;
+    margin-left: auto;
+    display: block;
+    border-radius: 16px;
+    object-fit: cover;
+    background: var(--t-primary-tint);
+  }
+
+  .satisfaction-shield-img {
+    display: block;
+    width: 200px; height: 200px;
+    margin: 40px auto 0;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 24px rgba(0,0,0,0.18));
+  }
+
+  .stars5 {
+    display: inline-flex;
+    letter-spacing: 1px;
+    line-height: 1;
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    vertical-align: middle;
+  }
+  .pricing-trustpilot { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .pricing-trustpilot .stars5 { font-size: 20px !important; }
+
+  /* ═══════════════════════════════════════════════════
      FAQ
      ═══════════════════════════════════════════════════ */
   .faq-list { max-width: 760px; margin: 48px auto 0; }
@@ -689,42 +800,151 @@
     backdrop-filter: blur(4px);
   }
   .push-modal {
-    background: white; border-radius: 14px;
-    width: min(560px, 92vw); max-height: 80vh;
+    background: white; border-radius: 16px;
+    width: min(480px, 92vw);
     display: flex; flex-direction: column;
     overflow: hidden;
     box-shadow: 0 30px 80px rgba(0,0,0,0.3);
   }
   .push-modal-head {
-    padding: 18px 24px;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 18px 24px 14px;
     display: flex; align-items: center; justify-content: space-between;
-    font-size: 15px;
+    font-size: 16px;
   }
-  .push-events {
-    padding: 16px 24px;
-    overflow-y: auto;
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 12px;
-    line-height: 1.6;
+  .push-close-btn {
+    background: none; border: none; cursor: pointer;
+    color: #6b7280; font-size: 18px;
+    width: 28px; height: 28px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
   }
-  .push-event {
-    padding: 8px 0;
-    border-bottom: 1px dashed #f3f4f6;
-    display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline;
+  .push-close-btn:hover { background: #f3f4f6; color: #111827; }
+
+  .push-progress-track {
+    height: 4px; background: #f1f5f9;
+    margin: 0 24px; border-radius: 999px;
+    overflow: hidden;
   }
-  .push-event-phase {
-    font-weight: 700; color: #0f172a;
-    min-width: 110px;
+  .push-progress-fill {
+    height: 100%;
+    transition: width 0.45s ease;
+    border-radius: 999px;
   }
-  .push-event-status { color: var(--t-primary); font-weight: 600; }
-  .push-event-meta { color: #6b7280; }
-  .push-event-meta.error { color: #dc2626; font-weight: 600; }
-  .push-event-error { color: #dc2626; font-weight: 600; flex-basis: 100%; padding-left: 110px; }
-  .push-event-note { color: #92400e; font-style: italic; }
-  .push-event-pending::after { content: '...'; color: #94a3b8; }
-  .push-event-error.push-status-info .push-event-phase { color: #dc2626; }
-  .push-event-done .push-event-phase { color: #10b981; }
+
+  .push-body { padding: 26px 24px 24px; }
+
+  .push-current-title {
+    font-size: 18px; font-weight: 700;
+    margin: 0 0 4px; color: #0f172a;
+  }
+  .push-current-sub {
+    font-size: 13px; color: #64748b;
+    margin: 0 0 22px;
+  }
+  .push-current-sub:empty { margin: 0 0 12px; }
+
+  .push-step-list {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .push-step {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 13px; color: #94a3b8;
+    transition: color 0.2s;
+  }
+  .push-step.active { color: #0f172a; font-weight: 500; }
+  .push-step.done { color: #475569; }
+  .push-step.failed { color: #dc2626; }
+
+  .push-step-icon {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex: 0 0 22px;
+    border-radius: 50%;
+    background: #f1f5f9; color: #94a3b8;
+    font-weight: 700;
+  }
+  .push-step.active .push-step-icon { background: var(--t-tint); color: var(--t-primary); }
+  .push-step.done .push-step-icon { background: #ecfdf5; color: #10b981; }
+  .push-step.failed .push-step-icon { background: #fef2f2; color: #dc2626; }
+
+  .push-spinner {
+    width: 10px; height: 10px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: push-spin 0.8s linear infinite;
+  }
+  @keyframes push-spin { to { transform: rotate(360deg); } }
+
+  .push-success-state {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; padding: 8px 0 4px;
+  }
+  .push-check-icon {
+    margin-bottom: 18px;
+    animation: push-pop 0.4s cubic-bezier(.16,1.3,.4,1);
+  }
+  @keyframes push-pop { from { transform: scale(0.5); opacity: 0; } }
+  .push-check-circle {
+    stroke-dasharray: 151;
+    stroke-dashoffset: 151;
+    animation: push-draw-circle 0.55s ease-out 0.05s forwards;
+  }
+  .push-check-mark {
+    stroke-dasharray: 50;
+    stroke-dashoffset: 50;
+    animation: push-draw-check 0.4s ease-out 0.5s forwards;
+  }
+  @keyframes push-draw-circle { to { stroke-dashoffset: 0; } }
+  @keyframes push-draw-check { to { stroke-dashoffset: 0; } }
+
+  .push-success-title {
+    font-size: 20px; font-weight: 700; margin: 0 0 6px; color: #0f172a;
+  }
+  .push-success-sub {
+    font-size: 13px; color: #64748b; margin: 0 0 22px;
+    max-width: 320px; line-height: 1.5;
+  }
+  .push-cta-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 11px 22px;
+    background: var(--t-primary); color: white !important;
+    text-decoration: none;
+    font-weight: 600; font-size: 14px;
+    border-radius: 8px;
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+  }
+  .push-cta-link:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--t-primary) 30%, transparent);
+  }
+  .push-secondary-btn {
+    margin-top: 12px;
+    background: none; border: none; cursor: pointer;
+    color: #64748b; font-size: 13px;
+    padding: 6px 10px;
+  }
+  .push-secondary-btn:hover { color: #0f172a; }
+
+  .push-error-state {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; padding: 8px 0;
+  }
+  .push-x-icon {
+    width: 48px; height: 48px;
+    background: #fef2f2; color: #dc2626;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .push-error-msg {
+    font-size: 13px; color: #475569;
+    margin-bottom: 18px;
+    max-width: 360px; line-height: 1.5;
+    word-break: break-word;
+  }
 
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -937,6 +1157,71 @@ function ImgSlot({ ai = false, label, style }) {
 }
 
 // ═══════════════════════════════════════════════════════
+// Real-image URLs sourced from the live CC360 funnel preview.
+// STATIC = shared assets baked into every theme template (agency-level)
+// TEMPLATE_DEFAULTS = the AI-generated images baked into the Emerald master
+//   template. Used as fallback when a draft hasn't generated its own images
+//   yet. When a draft has generated images, /api/preview-funnel-image/...
+//   serves them in-flight (in-memory base64) before they're pushed.
+// ═══════════════════════════════════════════════════════
+const CDN_BASE = 'https://images.leadconnectorhq.com/image/f_webp/q_80';
+const STATIC = {
+  videoThumb: `${CDN_BASE}/r_1200/u_https://assets.cdn.filesafe.space/6BPWWH0wZPBQ3RJOY1ki/media/4b108f82-47a7-4e05-afc2-f03d9915dd56.png`,
+  testimonialAvatar: `${CDN_BASE}/r_320/u_https://assets.cdn.filesafe.space/6BPWWH0wZPBQ3RJOY1ki/media/2f300d86-044d-4e29-8b77-4a0a50aafc46.png`,
+  satisfactionShield: `${CDN_BASE}/r_640/u_https://assets.cdn.filesafe.space/6BPWWH0wZPBQ3RJOY1ki/media/cd97bfd1-549b-4635-a182-ff2ed4a7f58c.png`,
+  asSeenLogos: [
+    `${CDN_BASE}/r_320/u_https://storage.googleapis.com/msgsndr/YzdUoBRFcujSI4N6tUdf/media/68d14c77cc2a798baf9724b8.png`,
+    `${CDN_BASE}/r_320/u_https://storage.googleapis.com/msgsndr/YzdUoBRFcujSI4N6tUdf/media/68d14c77da43d84bed255b7a.png`,
+    `${CDN_BASE}/r_320/u_https://storage.googleapis.com/msgsndr/YzdUoBRFcujSI4N6tUdf/media/68d14c77da43d827b0255b79.png`,
+    `${CDN_BASE}/r_320/u_https://storage.googleapis.com/msgsndr/YzdUoBRFcujSI4N6tUdf/media/68d14c7756c445833f02958c.png`,
+    `${CDN_BASE}/r_320/u_https://storage.googleapis.com/msgsndr/YzdUoBRFcujSI4N6tUdf/media/68d14c771a53e2937dd88cec.png`,
+  ],
+  // 3 below testimonials + 1 in the pricing block's featured testimonial
+  successGrids: [
+    `${CDN_BASE}/r_640/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-grid-ixnCokYoyg.png`,
+    `${CDN_BASE}/r_640/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-grid-IwIIQ2Eyv9.png`,
+    `${CDN_BASE}/r_640/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-wall-5xCnTeeiIC.png`,
+  ],
+  successWall: `${CDN_BASE}/r_320/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-wall-GfeRk-BZIQ.png`,
+};
+const CDN = (id) => `${CDN_BASE}/r_640/u_https://assets.cdn.filesafe.space/ITeSh9QmCqRSsZwtBCZX/media/${id}.png`;
+const TEMPLATE_DEFAULTS = {
+  module_1: CDN('c25a6650-8c6e-4818-b089-64997ff1e077'),
+  module_2: CDN('c97621ac-a36f-4f94-9a22-d28e3df33601'),
+  module_3: CDN('435f0c61-0040-4091-bb6f-db815a827c1e'),
+  module_4: CDN('c8a01719-64ac-4871-99ee-e786a5ba32db'),
+  module_5: CDN('b55379ca-8326-415d-8b67-500a0e02a1e4'),
+  module_6: CDN('429f9e41-85a1-4b26-8dc7-5d02ee0c2174'),
+  module_7: CDN('1ae91cb5-2dec-4af9-9de4-68ece8333fce'),
+  module_8: CDN('b55379ca-8326-415d-8b67-500a0e02a1e4'),       // reuse if 8th missing
+  inside_card_1_icon: CDN('b2291622-e447-446e-bc82-c3aa2a9fe36b'),
+  inside_card_2_icon: CDN('b4eefa62-6906-406f-b51e-1fa1c31b6ca1'),
+  inside_card_3_icon: CDN('c2ae3a16-73f8-4593-b3ac-8bc7197337cc'),
+  inside_card_4_icon: CDN('47d65b05-a329-4f58-9926-2a8d4b8296b6'),
+  inside_card_5_icon: CDN('50dde839-541a-466b-8814-5891e1fdbb05'),
+  inside_card_6_icon: CDN('7fc1b63c-f30e-4dfb-9de7-b1516d94df44'),
+  pricing_laptop:     CDN('50c51670-8bee-464a-b97a-ec3f7d3067cf'),
+  instructor_photo:   CDN('e4596688-a603-4217-b620-2a8730bc91a6'),
+};
+
+// Resolve an image: if the draft has generated this key in memory, serve it
+// live from the backend; otherwise fall back to the template default.
+function funnelImgSrc(draftId, imageKeys, key) {
+  const fallback = TEMPLATE_DEFAULTS[key] || '';
+  if (!draftId || !imageKeys) return fallback;
+  return imageKeys.has(key) ? `/api/preview-funnel-image/${draftId}/${key}` : fallback;
+}
+
+// Gold 5-star widget — matches the CC360 template's star row.
+function Stars5({ size = 18, color = '#FFC107' }) {
+  return (
+    <span className="stars5" style={{ color, fontSize: size }} aria-label="5 stars">
+      {'★★★★★'}
+    </span>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // MAIN APP — wired to backend draft + push APIs
 // ═══════════════════════════════════════════════════════
 function App() {
@@ -953,6 +1238,8 @@ function App() {
   const [pushOpen, setPushOpen] = useState(false);
   const [pushDone, setPushDone] = useState(false);
   const [pushing, setPushing]   = useState(false);
+  const [locationId, setLocationId] = useState(null);
+  const [imageKeys, setImageKeys] = useState(() => new Set());
   const saveTimer = useRef(null);
 
   const theme = THEMES[themeKey];
@@ -967,6 +1254,10 @@ function App() {
         if (data.error) { showToast(data.error, true); return; }
         if (!data.funnel?.generated) { showToast('No funnel content in this draft', true); return; }
         // Hydrate state from server-side draft
+        if (data.locationId) setLocationId(data.locationId);
+        if (Array.isArray(data.funnel.imageKeys)) {
+          setImageKeys(new Set(data.funnel.imageKeys));
+        }
         if (data.funnel.content) setContent(prev => ({ ...prev, ...data.funnel.content }));
         if (data.funnel.input?.theme && THEMES[data.funnel.input.theme]) {
           setThemeKey(data.funnel.input.theme);
@@ -1104,10 +1395,10 @@ function App() {
 
       <div className="funnel-canvas">
         {step === 'sales' && (
-          <SalesPage c={content} setField={setField} theme={theme} openFaq={openFaq} setOpenFaq={setOpenFaq}/>
+          <SalesPage c={content} setField={setField} theme={theme} openFaq={openFaq} setOpenFaq={setOpenFaq} draftId={draftId} imageKeys={imageKeys}/>
         )}
         {step === 'checkout' && (
-          <CheckoutPage c={content} setField={setField} theme={theme} openFaq={openFaq} setOpenFaq={setOpenFaq}/>
+          <CheckoutPage c={content} setField={setField} theme={theme} openFaq={openFaq} setOpenFaq={setOpenFaq} draftId={draftId} imageKeys={imageKeys}/>
         )}
         {step === 'confirmation' && (
           <ConfirmationPage c={content} setField={setField} theme={theme}/>
@@ -1119,6 +1410,7 @@ function App() {
           events={pushEvents}
           done={pushDone}
           theme={theme}
+          locationId={locationId}
           onClose={() => setPushOpen(false)}
         />
       )}
@@ -1132,56 +1424,165 @@ function App() {
 
 // ═══════════════════════════════════════════════════════
 // PUSH PROGRESS OVERLAY
-// Streams NDJSON events from /api/funnel-only/push and shows phase-by-phase.
+// Streams NDJSON events from /api/funnel-only/push and shows a friendly
+// progress bar + per-step checklist, ending with a success state and a
+// link into the user's CC360 sub-account.
 // ═══════════════════════════════════════════════════════
-function PushOverlay({ events, done, theme, onClose }) {
+
+// Phase order — must match the server's emit sequence in /api/funnel-only/push
+const PUSH_PHASES = [
+  { key: 'auth',                label: 'Authenticating with CC360',     doneLabel: 'Authenticated' },
+  { key: 'theme-snapshot',      label: 'Applying theme template',       doneLabel: 'Theme applied' },
+  { key: 'funnel-photo',        label: 'Uploading instructor photo',    doneLabel: 'Photo uploaded' },
+  { key: 'funnel-images',       label: 'Uploading AI-generated images', doneLabel: 'Images uploaded' },
+  { key: 'funnel-customvalues', label: 'Syncing your funnel content',   doneLabel: 'Content synced' },
+];
+
+function PushOverlay({ events, done, theme, locationId, onClose }) {
+  // Derive overall state from the event stream
+  const errorEvent     = events.find(e => e.phase === 'error');
+  const finalDoneEvent = events.find(e => e.phase === 'done');
+  const isError        = !!errorEvent;
+  const isSuccess      = done && !isError && !!finalDoneEvent;
+
+  // Per-phase status: 'active' | 'done' | 'failed' (undefined = not started yet)
+  const phaseStatus = {};
+  for (const e of events) {
+    if (!PUSH_PHASES.find(p => p.key === e.phase)) continue;
+    if (e.status === 'done') phaseStatus[e.phase] = 'done';
+    else if (e.status === 'failed') phaseStatus[e.phase] = 'failed';
+    else if (e.status === 'start' || e.status === 'propagating') {
+      // Don't downgrade once we've seen 'done'/'failed'
+      if (!phaseStatus[e.phase]) phaseStatus[e.phase] = 'active';
+    }
+  }
+
+  // Progress: count completed (done or failed — failed phases still advance the bar)
+  const completedCount = PUSH_PHASES.filter(p =>
+    phaseStatus[p.key] === 'done' || phaseStatus[p.key] === 'failed'
+  ).length;
+  const progressPct = isSuccess ? 100 : Math.round((completedCount / PUSH_PHASES.length) * 100);
+
+  // Current phase = first active, or first not-yet-started
+  const currentPhase =
+    PUSH_PHASES.find(p => phaseStatus[p.key] === 'active') ||
+    PUSH_PHASES.find(p => !phaseStatus[p.key]) ||
+    PUSH_PHASES[PUSH_PHASES.length - 1];
+
+  // Subtext for the current phase — pulled from the latest event for it
+  const latestEv = [...events].reverse().find(e => e.phase === currentPhase.key);
+  let subtext = '';
+  if (currentPhase.key === 'theme-snapshot' && latestEv?.status === 'propagating') {
+    subtext = 'Waiting for CC360 to set up your funnel pages…';
+  } else if (currentPhase.key === 'funnel-images' && latestEv?.total) {
+    subtext = `${latestEv.total} images`;
+  } else if (currentPhase.key === 'funnel-customvalues' && latestEv?.total) {
+    subtext = `${latestEv.total} content values`;
+  }
+
+  // CC360 destination — funnels list inside the sub-account.
+  // The just-pushed funnel will be the most-recent entry there.
+  const cc360Url = locationId
+    ? `https://app.coursecreator360.com/v2/location/${locationId}/funnels-websites/funnels`
+    : null;
+
   return (
     <div className="push-overlay">
       <div className="push-modal">
         <div className="push-modal-head">
-          <strong>Pushing to CC360</strong>
-          {done && <button className="header-btn" onClick={onClose}>Close</button>}
+          <strong>
+            {isError   ? 'Push failed' :
+             isSuccess ? 'All done!'   :
+                         'Pushing to CC360'}
+          </strong>
+          {(done || isError) && (
+            <button className="push-close-btn" onClick={onClose} aria-label="Close">✕</button>
+          )}
         </div>
-        <div className="push-events">
-          {events.map((e, i) => (
-            <div key={i} className={`push-event push-event-${e.phase} push-status-${e.status || 'info'}`}>
-              <span className="push-event-phase">{labelPhase(e.phase)}</span>
-              {e.status && <span className="push-event-status">{e.status}</span>}
-              {e.theme && <span className="push-event-meta">theme={e.theme}</span>}
-              {e.source && <span className="push-event-meta">auth={e.source}</span>}
-              {typeof e.uploaded === 'number' && <span className="push-event-meta">uploaded={e.uploaded}</span>}
-              {typeof e.updated === 'number' && <span className="push-event-meta">updated={e.updated}</span>}
-              {typeof e.created === 'number' && <span className="push-event-meta">created={e.created}</span>}
-              {typeof e.failed === 'number' && e.failed > 0 && <span className="push-event-meta error">failed={e.failed}</span>}
-              {e.error && <span className="push-event-error">{e.error}</span>}
-              {e.note && <span className="push-event-note">{e.note}</span>}
+
+        {!isError && (
+          <div className="push-progress-track">
+            <div className="push-progress-fill"
+                 style={{ width: `${progressPct}%`, background: theme.primary }}/>
+          </div>
+        )}
+
+        <div className="push-body">
+          {isError ? (
+            <div className="push-error-state">
+              <div className="push-x-icon">✕</div>
+              <div className="push-error-msg">{errorEvent.error || 'Something went wrong.'}</div>
+              <button className="push-cta-link" onClick={onClose} style={{ background: '#dc2626' }}>
+                Close
+              </button>
             </div>
-          ))}
-          {!done && <div className="push-event push-event-pending">…</div>}
+          ) : isSuccess ? (
+            <div className="push-success-state">
+              <div className="push-check-icon">
+                <svg viewBox="0 0 52 52" width="68" height="68" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="26" cy="26" r="24" fill="none"
+                          stroke={theme.primary} strokeWidth="3"
+                          className="push-check-circle"/>
+                  <path d="M14 27 l8 8 l16 -16" fill="none"
+                        stroke={theme.primary} strokeWidth="4"
+                        strokeLinecap="round" strokeLinejoin="round"
+                        className="push-check-mark"/>
+                </svg>
+              </div>
+              <h3 className="push-success-title">Your funnel is live in CC360</h3>
+              <p className="push-success-sub">
+                The {theme.name} theme has been applied and all your content is synced.
+              </p>
+              {cc360Url ? (
+                <a href={cc360Url} target="_blank" rel="noreferrer" className="push-cta-link">
+                  View in CC360 →
+                </a>
+              ) : (
+                <button className="push-cta-link" onClick={onClose}>Close</button>
+              )}
+              {cc360Url && (
+                <button className="push-secondary-btn" onClick={onClose}>Stay here</button>
+              )}
+            </div>
+          ) : (
+            <>
+              <h3 className="push-current-title">{currentPhase.label}…</h3>
+              <p className="push-current-sub">{subtext}</p>
+              <ul className="push-step-list">
+                {PUSH_PHASES.map(p => {
+                  const status = phaseStatus[p.key];
+                  const isActive = !status && p.key === currentPhase.key
+                                || status === 'active';
+                  const isDone   = status === 'done';
+                  const isFailed = status === 'failed';
+                  return (
+                    <li key={p.key}
+                        className={`push-step ${isActive ? 'active' : ''} ${isDone ? 'done' : ''} ${isFailed ? 'failed' : ''}`}>
+                      <span className="push-step-icon">
+                        {isDone   ? '✓' :
+                         isFailed ? '!' :
+                         isActive ? <span className="push-spinner"/> :
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }}/>}
+                      </span>
+                      <span className="push-step-label">
+                        {isDone ? p.doneLabel : p.label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function labelPhase(phase) {
-  const map = {
-    start: 'Start',
-    auth: 'Auth',
-    'theme-snapshot': 'Theme Snapshot',
-    'funnel-photo': 'Instructor Photo',
-    'funnel-images': 'Funnel Images',
-    'funnel-customvalues': 'Content Values',
-    done: 'Done',
-    error: 'Error',
-  };
-  return map[phase] || phase;
-}
-
 // ═══════════════════════════════════════════════════════
 // SALES PAGE
 // ═══════════════════════════════════════════════════════
-function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
+function SalesPage({ c, setField, theme, openFaq, setOpenFaq, draftId, imageKeys }) {
   return (
     <>
       {/* HERO */}
@@ -1219,7 +1620,10 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
             </div>
             <div>
               <div className="hero-video-caption">🔊 CLICK BELOW TO WATCH FIRST!</div>
-              <div className="hero-video">▶</div>
+              <div className="hero-video">
+                <img src={STATIC.videoThumb} alt="" className="hero-video-img"/>
+                <div className="hero-video-play">▶</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1230,11 +1634,9 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
         <div className="section-inner">
           <div className="as-seen-row">
             <div className="as-seen-label">AS SEEN ON</div>
-            <div className="as-seen-logo"/>
-            <div className="as-seen-logo"/>
-            <div className="as-seen-logo"/>
-            <div className="as-seen-logo"/>
-            <div className="as-seen-logo"/>
+            {STATIC.asSeenLogos.map((url, i) => (
+              <img key={i} src={url} alt="" className="as-seen-logo-img"/>
+            ))}
           </div>
         </div>
       </section>
@@ -1281,7 +1683,11 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
           <div className="inside-grid">
             {c.inside_cards.map((card, i) => (
               <div key={i} className="inside-card">
-                <ImgSlot ai label={`Card ${i+1} icon`} style={{width:72,height:72,margin:'0 auto 22px',borderRadius:'50%'}}/>
+                <img
+                  src={funnelImgSrc(draftId, imageKeys, `inside_card_${i+1}_icon`)}
+                  alt=""
+                  className="inside-card-icon-img"
+                />
                 <div className="inside-card-title">
                   <E value={card.title} onChange={v=>setField(`inside_cards.${i}.title`, v)} className="center"/>
                 </div>
@@ -1303,12 +1709,21 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
           <div className="testimonials-grid">
             {c.testimonials.map((t,i) => (
               <div key={i} className="testimonial-card">
-                <ImgSlot label="Avatar (static)" style={{width:64,height:64,borderRadius:'50%',margin:'0 auto 18px'}}/>
+                <Stars5 size={16}/>
                 <div className="testimonial-quote">
                   "<E multi value={t.quote} onChange={v=>setField(`testimonials.${i}.quote`, v)}/>"
                 </div>
                 <div className="testimonial-name">{c.testimonial_names_static[i]}</div>
-                <ImgSlot label={`Success grid ${i+1} (static)`} style={{aspectRatio:'4/3'}}/>
+                <img
+                  src={STATIC.testimonialAvatar}
+                  alt=""
+                  className="testimonial-avatar-img"
+                />
+                <img
+                  src={STATIC.successGrids[i] || STATIC.successGrids[0]}
+                  alt=""
+                  className="testimonial-success-img"
+                />
               </div>
             ))}
           </div>
@@ -1327,7 +1742,11 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
           <div className="modules-grid">
             {c.modules.map((m,i) => (
               <div key={i} className="module-card">
-                <ImgSlot ai label={`Module ${i+1} image`} style={{aspectRatio:1}}/>
+                <img
+                  src={funnelImgSrc(draftId, imageKeys, `module_${i+1}`)}
+                  alt=""
+                  className="module-card-img"
+                />
                 <div className="module-card-body">
                   <div className="module-card-title">
                     <E value={m.title} onChange={v=>setField(`modules.${i}.title`, v)} className="center"/>
@@ -1348,7 +1767,7 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
           <div className="pricing-grid">
             <div>
               <div className="pricing-trustpilot">
-                <span className="pricing-trustpilot-stars">★★★★★</span>
+                <Stars5 size={20}/>
                 <span>4.9/5 star reviews</span>
               </div>
               <h2 className="h2-display left">
@@ -1357,7 +1776,11 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
               <p className="body-lg">
                 <E multi value={c.pricing_desc} onChange={v=>setField('pricing_desc',v)}/>
               </p>
-              <ImgSlot ai label="Laptop mockup" style={{aspectRatio:'4/3', marginTop:32}}/>
+              <img
+                src={funnelImgSrc(draftId, imageKeys, 'pricing_laptop')}
+                alt=""
+                className="pricing-laptop-img"
+              />
             </div>
             <div className="pricing-card">
               <div className="pricing-card-title">
@@ -1378,7 +1801,7 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
                 <E inline value={c.pricing_cta} onChange={v=>setField('pricing_cta',v)}/>
               </button>
               <div className="featured-testimonial">
-                <ImgSlot label="Wall img (static)" style={{width:80,height:80,borderRadius:'50%'}}/>
+                <img src={STATIC.successWall} alt="" className="featured-testimonial-img"/>
                 <div>
                   <span className="featured-testimonial-name">
                     <E value={c.featured_name} onChange={v=>setField('featured_name',v)}/>
@@ -1416,7 +1839,11 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
                 ))}
               </ul>
             </div>
-            <ImgSlot label="Instructor photo (static)" style={{aspectRatio:1,borderRadius:16,maxWidth:460,marginLeft:'auto'}}/>
+            <img
+              src={funnelImgSrc(draftId, imageKeys, 'instructor_photo')}
+              alt=""
+              className="instructor-photo-img"
+            />
           </div>
         </div>
       </section>
@@ -1454,7 +1881,7 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
           <p className="body-lg center">
             <E multi value={c.satisfaction_body} onChange={v=>setField('satisfaction_body',v)} className="center"/>
           </p>
-          <div className="satisfaction-shield">100%<br/>SATISFACTION<br/>GUARANTEED</div>
+          <img src={STATIC.satisfactionShield} alt="100% Satisfaction Guaranteed" className="satisfaction-shield-img"/>
         </div>
       </section>
 
@@ -1508,7 +1935,7 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq }) {
 // ═══════════════════════════════════════════════════════
 // CHECKOUT PAGE
 // ═══════════════════════════════════════════════════════
-function CheckoutPage({ c, setField, theme, openFaq, setOpenFaq }) {
+function CheckoutPage({ c, setField, theme, openFaq, setOpenFaq, draftId, imageKeys }) {
   return (
     <>
       {/* HEADER */}
@@ -1556,10 +1983,15 @@ function CheckoutPage({ c, setField, theme, openFaq, setOpenFaq }) {
             {/* RIGHT — offer recap, mirrors the sales pricing card */}
             <div>
               <div className="pricing-trustpilot">
-                <span className="pricing-trustpilot-stars">★★★★★</span>
+                <Stars5 size={20}/>
                 <span>4.9/5 star reviews</span>
               </div>
-              <ImgSlot ai label="Laptop mockup" style={{aspectRatio:'4/3', margin:'16px 0 28px'}}/>
+              <img
+                src={funnelImgSrc(draftId, imageKeys, 'pricing_laptop')}
+                alt=""
+                className="pricing-laptop-img"
+                style={{margin:'16px 0 28px'}}
+              />
               <div className="pricing-card-title">
                 <E value={c.pricing_card_title} onChange={v=>setField('pricing_card_title',v)}/>
               </div>
@@ -1575,7 +2007,7 @@ function CheckoutPage({ c, setField, theme, openFaq, setOpenFaq }) {
                 <E value={c.price} onChange={v=>setField('price',v)}/>
               </div>
               <div className="featured-testimonial">
-                <ImgSlot label="Wall img (static)" style={{width:80,height:80,borderRadius:'50%'}}/>
+                <img src={STATIC.successWall} alt="" className="featured-testimonial-img"/>
                 <div>
                   <span className="featured-testimonial-name">
                     <E value={c.featured_name} onChange={v=>setField('featured_name',v)}/>
@@ -1602,7 +2034,7 @@ function CheckoutPage({ c, setField, theme, openFaq, setOpenFaq }) {
           <p className="body-lg center">
             <E multi value={c.checkout_sat_body} onChange={v=>setField('checkout_sat_body',v)} className="center"/>
           </p>
-          <div className="satisfaction-shield">100%<br/>SATISFACTION<br/>GUARANTEED</div>
+          <img src={STATIC.satisfactionShield} alt="100% Satisfaction Guaranteed" className="satisfaction-shield-img"/>
         </div>
       </section>
 

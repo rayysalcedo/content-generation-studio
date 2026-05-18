@@ -70,11 +70,53 @@
   .theme-swatch:hover .theme-swatch-tooltip { opacity: 1; }
 
   .header-spacer { flex: 1; }
-  .step-select {
-    border: 1px solid #d4d4d0; background: white;
-    border-radius: 6px; padding: 8px 12px;
+
+  /* Back to Studio link — sits at the very left of the header */
+  .back-to-studio {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 11px 7px 8px;
+    border-radius: 8px;
+    color: #475569;
     font-size: 13px; font-weight: 500;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
   }
+  .back-to-studio:hover {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #0f172a;
+  }
+  .back-to-studio svg { flex-shrink: 0; }
+  .header-divider {
+    width: 1px; height: 26px; background: #e5e7eb;
+    margin: 0 4px;
+  }
+
+  /* Segmented pill control for Sales / Checkout / Confirmation */
+  .step-tabs {
+    display: inline-flex;
+    background: #f1f5f9;
+    border-radius: 9px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .step-tab {
+    background: none; border: none; cursor: pointer;
+    padding: 7px 14px;
+    font-size: 13px; font-weight: 500;
+    color: #64748b;
+    border-radius: 7px;
+    transition: color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+    white-space: nowrap;
+  }
+  .step-tab:hover { color: #0f172a; }
+  .step-tab.active {
+    background: white;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1px rgba(15,23,42,0.04);
+  }
+
   .header-btn {
     border: 1px solid #d4d4d0; background: white;
     border-radius: 6px; padding: 8px 16px;
@@ -1376,6 +1418,16 @@ function App() {
   return (
     <div style={cssVars}>
       <header className="app-header">
+        <a href="/" className="back-to-studio" title="Back to Studio">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth="2.2"
+               strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+          <span>Studio</span>
+        </a>
+        <div className="header-divider"></div>
+
         <div className="app-brand">
           <span className="app-brand-dot"></span>
           <span>CC360 Studio</span>
@@ -1396,11 +1448,24 @@ function App() {
 
         <div className="header-spacer"></div>
 
-        <select className="step-select" value={step} onChange={e => setStep(e.target.value)}>
-          <option value="sales">Sales Page</option>
-          <option value="checkout">Checkout</option>
-          <option value="confirmation">Confirmation</option>
-        </select>
+        <div className="step-tabs" role="tablist" aria-label="Funnel page">
+          {[
+            { key: 'sales',        label: 'Sales' },
+            { key: 'checkout',     label: 'Checkout' },
+            { key: 'confirmation', label: 'Confirmation' },
+          ].map(t => (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={step === t.key}
+              className={`step-tab ${step === t.key ? 'active' : ''}`}
+              onClick={() => setStep(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
         <button className="header-btn primary" onClick={pushToCC360} disabled={pushing}>
           {pushing ? 'Pushing…' : 'Push to CC360'}

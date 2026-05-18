@@ -166,34 +166,6 @@
   .file-preview .fp-meta { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
   .file-preview .fp-remove { background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px; }
 
-  /* Color swatches */
-  .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
-  .swatch {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: transform 0.1s, border-color 0.1s;
-  }
-  .swatch:hover { transform: scale(1.1); }
-  .swatch.selected { border-color: var(--text); }
-
-  /* Dark bg color picker (custom) */
-  .color-picker-row {
-    display: flex; gap: 10px; align-items: center;
-  }
-  .color-picker-row input[type="color"] {
-    width: 44px; height: 44px;
-    border: 1px solid var(--border-strong);
-    border-radius: 6px; padding: 2px;
-    cursor: pointer; flex-shrink: 0;
-    background: var(--surface);
-  }
-  .color-picker-row input[type="text"] {
-    flex: 1; font-family: var(--mono);
-    text-transform: uppercase;
-  }
-
   /* Toggle (mirrors workbook-toggle in main form) */
   .workbook-toggle {
     display: flex;
@@ -367,37 +339,6 @@
 
       <div class="field">
         <div class="label">
-          <span class="label-text">Primary Brand Color</span>
-          <span class="label-required">required · CTAs and accents</span>
-        </div>
-        <div class="swatches" id="swatches">
-          <button type="button" class="swatch selected" data-color="#6366f1" style="background:#6366f1"></button>
-          <button type="button" class="swatch" data-color="#0ea5e9" style="background:#0ea5e9"></button>
-          <button type="button" class="swatch" data-color="#10b981" style="background:#10b981"></button>
-          <button type="button" class="swatch" data-color="#dc2626" style="background:#dc2626"></button>
-          <button type="button" class="swatch" data-color="#ea580c" style="background:#ea580c"></button>
-          <button type="button" class="swatch" data-color="#f59e0b" style="background:#f59e0b"></button>
-          <button type="button" class="swatch" data-color="#d946ef" style="background:#d946ef"></button>
-          <button type="button" class="swatch" data-color="#8b5cf6" style="background:#8b5cf6"></button>
-          <button type="button" class="swatch" data-color="#ec4899" style="background:#ec4899"></button>
-          <button type="button" class="swatch" data-color="#0f172a" style="background:#0f172a"></button>
-        </div>
-        <input type="hidden" id="brandPrimary" value="#6366f1" />
-      </div>
-
-      <div class="field">
-        <div class="label">
-          <span class="label-text">Dark Section Background</span>
-          <span class="label-required">required · hero, FAQ, footer</span>
-        </div>
-        <div class="color-picker-row">
-          <input type="color" id="brandDarkBgColor" value="#0A1C3D" />
-          <input type="text" id="brandDarkBgHex" value="#0A1C3D" maxlength="7" pattern="^#[0-9a-fA-F]{6}$" />
-        </div>
-      </div>
-
-      <div class="field">
-        <div class="label">
           <span class="label-text">AI Instructions</span>
           <span class="label-hint">optional · tone, vocabulary, audience notes</span>
         </div>
@@ -462,26 +403,6 @@ function showPhoto() {
   photoPreview.classList.add('visible');
 }
 
-// Swatch picker for primary brand color
-const accentInput = document.getElementById('brandPrimary');
-const swatches = document.querySelectorAll('.swatch');
-swatches.forEach(s => {
-  s.addEventListener('click', () => {
-    swatches.forEach(x => x.classList.remove('selected'));
-    s.classList.add('selected');
-    accentInput.value = s.dataset.color;
-  });
-});
-
-// Color picker sync (dark bg)
-const darkBgColor = document.getElementById('brandDarkBgColor');
-const darkBgHex = document.getElementById('brandDarkBgHex');
-darkBgColor.addEventListener('input', () => { darkBgHex.value = darkBgColor.value.toUpperCase(); });
-darkBgHex.addEventListener('input', () => {
-  const v = darkBgHex.value.trim();
-  if (/^#[0-9a-fA-F]{6}$/.test(v)) darkBgColor.value = v.toLowerCase();
-});
-
 // Form submission
 const form = document.getElementById('funnel-form');
 const submitBtn = document.getElementById('submit-btn');
@@ -509,11 +430,6 @@ form.addEventListener('submit', async (e) => {
 
   if (!photoInput.files.length) return showError('Instructor photo is required');
 
-  const brandPrimary = accentInput.value;
-  const brandDarkBg = darkBgHex.value.trim().toUpperCase();
-  if (!/^#[0-9a-fA-F]{6}$/.test(brandPrimary)) return showError('Pick a primary brand color');
-  if (!/^#[0-9a-fA-F]{6}$/.test(brandDarkBg)) return showError('Dark section color must be a valid hex');
-
   try { localStorage.setItem(LOCATION_KEY, locationId); } catch (_) {}
   setLoading(true);
 
@@ -524,8 +440,6 @@ form.addEventListener('submit', async (e) => {
     fd.append('coursePitch', coursePitch);
     fd.append('instructorName', instructorName);
     fd.append('coursePrice', coursePrice);
-    fd.append('brandPrimary', brandPrimary);
-    fd.append('brandDarkBg', brandDarkBg);
     fd.append('instructions', document.getElementById('instructions').value.trim());
     fd.append('instructorPhoto', photoInput.files[0]);
     fd.append('skipImages', document.getElementById('skipImages').checked ? 'true' : 'false');

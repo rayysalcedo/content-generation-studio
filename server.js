@@ -1670,7 +1670,13 @@ app.post(
   upload.single('instructorPhoto'),
   async (req, res) => {
     try {
-      const { courseTitle, coursePitch, instructorName, coursePrice, brandPrimary, brandDarkBg, instructions } = req.body;
+      const { courseTitle, coursePitch, instructorName, coursePrice, instructions } = req.body;
+      // Brand colors are no longer chosen by the user — they're baked into the
+      // 5 themed funnel templates. Accept any value the form sends for backward
+      // compat, but fall back to sensible defaults so we don't 400 on empty.
+      const HEX = /^#[0-9a-fA-F]{6}$/;
+      const brandPrimary = HEX.test(req.body.brandPrimary || '') ? req.body.brandPrimary : '#6366f1';
+      const brandDarkBg  = HEX.test(req.body.brandDarkBg  || '') ? req.body.brandDarkBg  : '#0A1C3D';
       const skipImages = req.body.skipImages === 'true' || req.body.skipImages === true;
       const locationId = pickLocationId(req.body.locationId);
 
@@ -1682,8 +1688,6 @@ app.post(
       if (!instructorName?.trim()) return res.status(400).json({ error: 'Instructor first name is required' });
       if (!coursePrice?.trim()) return res.status(400).json({ error: 'Course price is required' });
       if (!req.file) return res.status(400).json({ error: 'Instructor photo upload is required' });
-      if (!/^#[0-9a-fA-F]{6}$/.test(brandPrimary || '')) return res.status(400).json({ error: 'Brand primary color must be a 6-digit hex' });
-      if (!/^#[0-9a-fA-F]{6}$/.test(brandDarkBg || '')) return res.status(400).json({ error: 'Dark section color must be a 6-digit hex' });
 
       console.log(`📝 [funnel-only] Generating funnel for "${courseTitle}" → ${locationId} (skipImages=${skipImages})...`);
       const funnelContent = await generateFunnelContent({

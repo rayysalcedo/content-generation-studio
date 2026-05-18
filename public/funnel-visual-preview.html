@@ -590,18 +590,13 @@
   }
 
   .testimonial-avatar-img {
-    width: 64px; height: 64px;
-    border-radius: 50%;
-    margin: 16px auto 0;
+    width: 100%;
+    max-width: 180px;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    margin: 18px auto 0;
     display: block;
     object-fit: cover;
-  }
-  .testimonial-success-img {
-    width: 100%; aspect-ratio: 4/3;
-    margin-top: 18px;
-    border-radius: 10px;
-    object-fit: cover;
-    display: block;
   }
   .testimonial-card .stars5 {
     display: block; text-align: center;
@@ -905,6 +900,28 @@
     font-size: 13px; color: #64748b; margin: 0 0 22px;
     max-width: 320px; line-height: 1.5;
   }
+  .push-locate-hint {
+    display: flex; flex-direction: column; gap: 6px;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    text-align: left;
+    max-width: 380px;
+    width: 100%;
+  }
+  .push-locate-hint-label {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--t-primary);
+  }
+  .push-locate-hint-text {
+    font-size: 12px; line-height: 1.55;
+    color: #475569;
+  }
+  .push-locate-hint-text strong {
+    color: #0f172a; font-weight: 600;
+  }
   .push-cta-link {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 11px 22px;
@@ -1167,7 +1184,6 @@ function ImgSlot({ ai = false, label, style }) {
 const CDN_BASE = 'https://images.leadconnectorhq.com/image/f_webp/q_80';
 const STATIC = {
   videoThumb: `${CDN_BASE}/r_1200/u_https://assets.cdn.filesafe.space/6BPWWH0wZPBQ3RJOY1ki/media/4b108f82-47a7-4e05-afc2-f03d9915dd56.png`,
-  testimonialAvatar: `${CDN_BASE}/r_320/u_https://assets.cdn.filesafe.space/6BPWWH0wZPBQ3RJOY1ki/media/2f300d86-044d-4e29-8b77-4a0a50aafc46.png`,
   satisfactionShield: `${CDN_BASE}/r_640/u_https://assets.cdn.filesafe.space/6BPWWH0wZPBQ3RJOY1ki/media/cd97bfd1-549b-4635-a182-ff2ed4a7f58c.png`,
   asSeenLogos: [
     `${CDN_BASE}/r_320/u_https://storage.googleapis.com/msgsndr/YzdUoBRFcujSI4N6tUdf/media/68d14c77cc2a798baf9724b8.png`,
@@ -1176,12 +1192,16 @@ const STATIC = {
     `${CDN_BASE}/r_320/u_https://storage.googleapis.com/msgsndr/YzdUoBRFcujSI4N6tUdf/media/68d14c7756c445833f02958c.png`,
     `${CDN_BASE}/r_320/u_https://storage.googleapis.com/msgsndr/YzdUoBRFcujSI4N6tUdf/media/68d14c771a53e2937dd88cec.png`,
   ],
-  // 3 below testimonials + 1 in the pricing block's featured testimonial
-  successGrids: [
-    `${CDN_BASE}/r_640/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-grid-ixnCokYoyg.png`,
-    `${CDN_BASE}/r_640/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-grid-IwIIQ2Eyv9.png`,
-    `${CDN_BASE}/r_640/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-wall-5xCnTeeiIC.png`,
+  // The three testimonial avatars (one per testimonial card).
+  // NOTE: CC360 names these "student-success-grid" in their CDN — the filename
+  // is misleading, they're actually the AI-generated portrait photos used as
+  // the small avatar at the bottom of each testimonial card.
+  testimonialAvatars: [
+    `${CDN_BASE}/r_320/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-grid-ixnCokYoyg.png`,
+    `${CDN_BASE}/r_320/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-grid-IwIIQ2Eyv9.png`,
+    `${CDN_BASE}/r_320/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-wall-5xCnTeeiIC.png`,
   ],
+  // Featured testimonial portrait in the pricing-card block (e.g. "Lina M.")
   successWall: `${CDN_BASE}/r_320/u_https://storage.googleapis.com/funnel-ai-production/image-generation/ITeSh9QmCqRSsZwtBCZX/student-success-wall-GfeRk-BZIQ.png`,
 };
 const CDN = (id) => `${CDN_BASE}/r_640/u_https://assets.cdn.filesafe.space/ITeSh9QmCqRSsZwtBCZX/media/${id}.png`;
@@ -1533,9 +1553,15 @@ function PushOverlay({ events, done, theme, locationId, onClose }) {
               <p className="push-success-sub">
                 The {theme.name} theme has been applied and all your content is synced.
               </p>
+              <div className="push-locate-hint">
+                <span className="push-locate-hint-label">FIND IT IN CC360</span>
+                <span className="push-locate-hint-text">
+                  Sites → Funnels → look for <strong>"CC360 AI Funnel Template ({theme.name}-Theme)"</strong>
+                </span>
+              </div>
               {cc360Url ? (
                 <a href={cc360Url} target="_blank" rel="noreferrer" className="push-cta-link">
-                  View in CC360 →
+                  Open Funnels in CC360 →
                 </a>
               ) : (
                 <button className="push-cta-link" onClick={onClose}>Close</button>
@@ -1715,14 +1741,9 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq, draftId, imageKeys
                 </div>
                 <div className="testimonial-name">{c.testimonial_names_static[i]}</div>
                 <img
-                  src={STATIC.testimonialAvatar}
+                  src={STATIC.testimonialAvatars[i] || STATIC.testimonialAvatars[0]}
                   alt=""
                   className="testimonial-avatar-img"
-                />
-                <img
-                  src={STATIC.successGrids[i] || STATIC.successGrids[0]}
-                  alt=""
-                  className="testimonial-success-img"
                 />
               </div>
             ))}

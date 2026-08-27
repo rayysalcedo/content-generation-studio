@@ -33,6 +33,16 @@ import { THEMES, DEFAULT_THEME, getTheme, isValidTheme } from './lib/funnel-them
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Never let a stray promise rejection or exception take the whole server down.
+// Without these, one failed background task drops every open generation stream
+// with no error event (the UI then shows "ended without a draft ID").
+process.on('unhandledRejection', (err) => {
+  console.error('⚠️  Unhandled promise rejection (server kept alive):', err);
+});
+process.on('uncaughtException', (err) => {
+  console.error('⚠️  Uncaught exception (server kept alive):', err);
+});
+
 const {
   CC360_JWT,                                  // Legacy PIT fallback (single-account use)
   CC360_USER_JWT,                             // User-session JWT for INTERNAL backend.* API (thumbnail attach only)
@@ -364,8 +374,20 @@ app.post(
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
   const emit = (event) => { try { res.write(JSON.stringify(event) + '\n'); } catch {} };
+  // Heartbeat every 15s: the outline step can be silent for minutes on a slow
+  // model or while retrying a 429, and idle HTTP connections get cut by proxies.
+  // The UI ignores unknown phases, so this is invisible to the user.
+  const heartbeat = setInterval(() => emit({ phase: 'heartbeat', t: Date.now() }), 15_000);
+  const genStart = Date.now();
+  res.on('close', () => {
+    clearInterval(heartbeat);
+    if (!res.writableEnded) {
+      console.warn(`⚠️  /api/generate: client disconnected after ${Math.round((Date.now() - genStart) / 1000)}s (generation may still be running)`);
+    }
+  });
   const fail = (errMsg, statusHint) => {
     emit({ phase: 'error', error: errMsg, statusHint: statusHint || null });
+    clearInterval(heartbeat);
     res.end();
   };
 
@@ -665,6 +687,8 @@ app.post(
     } else {
       res.status(500).json({ error: friendly, raw: err.message });
     }
+  } finally {
+    clearInterval(heartbeat);
   }
 });
 

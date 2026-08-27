@@ -1,4 +1,4 @@
-// server.js — CC360 Course Studio (local web app)
+// server.js — Content Generation Studio (web app)
 //
 // Run with:  node server.js
 // Then open: http://localhost:3000
@@ -37,10 +37,11 @@ const {
   CC360_JWT,                                  // Legacy PIT fallback (single-account use)
   CC360_USER_JWT,                             // User-session JWT for INTERNAL backend.* API (thumbnail attach only)
   CC360_LOCATION_ID,                          // Optional fallback (used by CLI / when form leaves it empty)
-  OPENAI_API_KEY,                             // The one and only AI provider key now
-  OPENAI_TEXT_MODEL = 'gpt-5.4-mini',         // Course structure + workbook generation
-  OPENAI_IMAGE_MODEL = 'gpt-image-1-mini',    // Thumbnail generation
-  OPENAI_IMAGE_QUALITY = 'medium',            // 'low' | 'medium' | 'high'
+  GEMINI_API_KEY,                             // The one and only AI provider key now
+  GEMINI_TEXT_MODEL = 'gemini-3.7-flash',     // Course structure + workbook + funnel copy
+  GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image', // Thumbnails + funnel images (Nano Banana 2)
+  GEMINI_IMAGE_SIZE = '1K',                   // '512' | '1K' | '2K' | '4K'
+  AI_IMAGES = 'on',                           // 'off' → skip ALL image generation (free tier has no image models)
   GHL_CLIENT_ID,                              // OAuth: Sub-Account Marketplace App client ID
   GHL_CLIENT_SECRET,                          // OAuth: Sub-Account Marketplace App client secret
   GHL_OAUTH_REDIRECT_URI,                     // OAuth: e.g. https://your-app.onrender.com/oauth/callback
@@ -53,10 +54,14 @@ const {
 const DEFAULT_MODULE_COUNT = 5;
 const DEFAULT_LESSONS_PER_MODULE = 5;
 
-if (!OPENAI_API_KEY) {
-  console.error('❌ Missing required env var: OPENAI_API_KEY');
+if (!GEMINI_API_KEY) {
+  console.error('❌ Missing required env var: GEMINI_API_KEY');
   process.exit(1);
 }
+// Image generation is only possible on a paid Gemini project; on the free tier
+// set AI_IMAGES=off so courses/funnels build without thumbnails instead of
+// failing on every image call.
+const IMAGES_ENABLED = !!GEMINI_API_KEY && String(AI_IMAGES).toLowerCase() !== 'off';
 const oauthConfigured = !!(GHL_CLIENT_ID && GHL_CLIENT_SECRET && GHL_OAUTH_REDIRECT_URI);
 if (!CC360_JWT && !oauthConfigured) {
   console.error('❌ No CC360 auth configured. Set either:');
@@ -426,8 +431,8 @@ app.post(
     console.log(`📚 Generating course structure for "${courseTitle}" (${resolvedModuleCount} × ${resolvedLessonsPerModule})...`);
     emit({ phase: 'outline', status: 'start' });
     const structure = await generateCourseStructure({
-      apiKey: OPENAI_API_KEY,
-      model: OPENAI_TEXT_MODEL,
+      apiKey: GEMINI_API_KEY,
+      model: GEMINI_TEXT_MODEL,
       mode,
       sourceText,
       courseTitle,
@@ -464,8 +469,8 @@ app.post(
       console.log(`📝 [parallel] Generating workbook content for ${totalLessons} lessons...`);
       emit({ phase: 'workbooks', status: 'start', total: totalLessons });
       const r = await generateWorkbooksForCourse({
-        apiKey: OPENAI_API_KEY,
-        model: OPENAI_TEXT_MODEL,
+        apiKey: GEMINI_API_KEY,
+        model: GEMINI_TEXT_MODEL,
         structure,
         onProgress: ({ done, total, failed }) => {
           if (done % 5 === 0 || done === total) {
@@ -484,16 +489,16 @@ app.post(
       if (!(wantThumbnails && totalLessons > 0)) {
         return { skipped: true, stats: { total: 0, failed: 0 }, thumbnails: {} };
       }
-      if (!OPENAI_API_KEY) {
-        return { skipped: true, stats: { total: totalLessons + 1, failed: totalLessons + 1, error: 'OPENAI_API_KEY not configured' }, thumbnails: {} };
+      if (!IMAGES_ENABLED) {
+        return { skipped: true, stats: { total: totalLessons + 1, failed: totalLessons + 1, error: 'Image generation disabled (AI_IMAGES=off or no key)' }, thumbnails: {} };
       }
-      console.log(`🎨 [parallel] Generating ${totalLessons + 1} AI thumbnails (${OPENAI_IMAGE_MODEL}, ${OPENAI_IMAGE_QUALITY})...`);
+      console.log(`🎨 [parallel] Generating ${totalLessons + 1} AI thumbnails (${GEMINI_IMAGE_MODEL}, ${GEMINI_IMAGE_SIZE})...`);
       emit({ phase: 'thumbnails', status: 'start', total: totalLessons + 1 });
       try {
         const r = await generateThumbnailsForCourse({
-          apiKey: OPENAI_API_KEY,
-          model: OPENAI_IMAGE_MODEL,
-          quality: OPENAI_IMAGE_QUALITY,
+          apiKey: GEMINI_API_KEY,
+          model: GEMINI_IMAGE_MODEL,
+          imageSize: GEMINI_IMAGE_SIZE,
           structure,
           accent: accent || '#6366f1',
           targetAudience: targetAudience || '',
@@ -528,8 +533,8 @@ app.post(
         console.log(`📝 [parallel] Generating funnel copy for "${courseTitle}"...`);
         emit({ phase: 'funnel-content', status: 'start' });
         const funnelContent = await generateFunnelContent({
-          apiKey: OPENAI_API_KEY,
-          model: OPENAI_TEXT_MODEL,
+          apiKey: GEMINI_API_KEY,
+          model: GEMINI_TEXT_MODEL,
           courseTitle,
           courseDescription: funnelSeed,
           instructorName: instructorName.trim(),
@@ -542,14 +547,14 @@ app.post(
 
         let funnelImages = {};
         let funnelImageStats = { total: 0, failed: 0 };
-        if (OPENAI_API_KEY) {
-          console.log(`🎨 [parallel] Generating funnel images (${OPENAI_IMAGE_MODEL}, ${OPENAI_IMAGE_QUALITY})...`);
+        if (IMAGES_ENABLED) {
+          console.log(`🎨 [parallel] Generating funnel images (${GEMINI_IMAGE_MODEL}, ${GEMINI_IMAGE_SIZE})...`);
           emit({ phase: 'funnel-images', status: 'start' });
           try {
             const r = await generateFunnelImages({
-              apiKey: OPENAI_API_KEY,
-              model: OPENAI_IMAGE_MODEL,
-              quality: OPENAI_IMAGE_QUALITY,
+              apiKey: GEMINI_API_KEY,
+              model: GEMINI_IMAGE_MODEL,
+              imageSize: GEMINI_IMAGE_SIZE,
               content: funnelContent,
               courseTitle,
               accent: brandPrimary,
@@ -666,22 +671,22 @@ app.post(
 function humanizeAiError(err) {
   const msg = String(err?.message || err || '');
   if (/\b503\b|service unavailable|overloaded|high demand/i.test(msg)) {
-    return 'OpenAI is currently overloaded. Please wait a minute and try again. If this keeps happening, try setting OPENAI_TEXT_MODEL to gpt-5-mini or gpt-4.1-nano in your env.';
+    return 'Gemini is currently overloaded. Please wait a minute and try again. If this keeps happening, try setting GEMINI_TEXT_MODEL to gemini-3.5-flash or gemini-3.5-flash-lite in your env.';
   }
   if (/\b429\b|rate limit/i.test(msg)) {
-    return 'Hit the OpenAI rate limit. Wait 30 seconds and try again. If this keeps happening, your account tier may need to be raised.';
+    return 'Hit the Gemini rate limit / quota. Wait 30 seconds and try again. If this keeps happening, enable billing on your Google AI Studio project or lower AI_IMAGE_CONCURRENCY.';
   }
   if (/\b401\b|api key|unauthorized|invalid_api_key/i.test(msg)) {
-    return 'OpenAI rejected the API key. Check OPENAI_API_KEY in your env vars.';
+    return 'Gemini rejected the API key. Check GEMINI_API_KEY in your env vars.';
   }
   if (/\b400\b|invalid argument|invalid_request/i.test(msg)) {
-    return 'OpenAI rejected the prompt. Try a shorter source PDF or simpler description.';
+    return 'Gemini rejected the prompt. Try a shorter source PDF or simpler description.';
   }
   if (/timeout|timed.out|deadline/i.test(msg)) {
-    return 'OpenAI took too long to respond. Try a smaller course (fewer modules/lessons) or a shorter PDF.';
+    return 'Gemini took too long to respond. Try a smaller course (fewer modules/lessons) or a shorter PDF.';
   }
   if (/model.*not.*found|model_not_found/i.test(msg)) {
-    return `Model "${OPENAI_TEXT_MODEL}" not available on your account. Try gpt-5.4-mini, gpt-5-mini, or gpt-4.1-mini.`;
+    return `Model "${GEMINI_TEXT_MODEL}" not available. Try gemini-3.7-flash, gemini-3.5-flash, or gemini-3.5-flash-lite.`;
   }
   return err?.message || 'Generation failed';
 }
@@ -706,8 +711,8 @@ app.post('/api/regenerate/:draftId', async (req, res) => {
 
     const i = draft.input;
     const structure = await generateCourseStructure({
-      apiKey: OPENAI_API_KEY,
-      model: OPENAI_TEXT_MODEL,
+      apiKey: GEMINI_API_KEY,
+      model: GEMINI_TEXT_MODEL,
       mode: i.mode,
       sourceText: i.sourceText,
       courseTitle: i.courseTitle,
@@ -722,8 +727,8 @@ app.post('/api/regenerate/:draftId', async (req, res) => {
     let workbookStats = { total: 0, failed: 0 };
     if (i.generateWorkbooks) {
       const r = await generateWorkbooksForCourse({
-        apiKey: OPENAI_API_KEY,
-        model: OPENAI_TEXT_MODEL,
+        apiKey: GEMINI_API_KEY,
+        model: GEMINI_TEXT_MODEL,
         structure,
       });
       workbookStats = { total: r.total, failed: r.failed };
@@ -732,12 +737,12 @@ app.post('/api/regenerate/:draftId', async (req, res) => {
     // Re-generate thumbnails too (if originally enabled)
     let thumbnailStats = { total: 0, failed: 0 };
     let thumbnails = {};
-    if (i.generateThumbnails && OPENAI_API_KEY) {
+    if (i.generateThumbnails && IMAGES_ENABLED) {
       try {
         const r = await generateThumbnailsForCourse({
-          apiKey: OPENAI_API_KEY,
-          model: OPENAI_IMAGE_MODEL,
-          quality: OPENAI_IMAGE_QUALITY,
+          apiKey: GEMINI_API_KEY,
+          model: GEMINI_IMAGE_MODEL,
+          imageSize: GEMINI_IMAGE_SIZE,
           structure,
           accent: i.accent || '#6366f1',
           targetAudience: i.targetAudience || '',
@@ -763,8 +768,8 @@ app.post('/api/regenerate/:draftId', async (req, res) => {
         const funnelSeed = i.mode === 'description' ? (i.description || '') : (i.funnelPitch || '');
         console.log(`📝 Regenerating funnel copy for "${i.courseTitle}"...`);
         const newFunnelContent = await generateFunnelContent({
-          apiKey: OPENAI_API_KEY,
-          model: OPENAI_TEXT_MODEL,
+          apiKey: GEMINI_API_KEY,
+          model: GEMINI_TEXT_MODEL,
           courseTitle: i.courseTitle,
           courseDescription: funnelSeed,
           instructorName: i.instructorName,
@@ -774,12 +779,12 @@ app.post('/api/regenerate/:draftId', async (req, res) => {
         });
         let newImages = {};
         let newImageStats = { total: 0, failed: 0 };
-        if (OPENAI_API_KEY) {
+        if (IMAGES_ENABLED) {
           try {
             const r = await generateFunnelImages({
-              apiKey: OPENAI_API_KEY,
-              model: OPENAI_IMAGE_MODEL,
-              quality: OPENAI_IMAGE_QUALITY,
+              apiKey: GEMINI_API_KEY,
+              model: GEMINI_IMAGE_MODEL,
+              imageSize: GEMINI_IMAGE_SIZE,
               content: newFunnelContent,
               courseTitle: i.courseTitle,
               accent: i.brandPrimary || i.accent,
@@ -1211,7 +1216,7 @@ app.post('/api/push/:draftId', async (req, res) => {
       // ────────────────────────────────────────────────────────────────
       const themeKey = isValidTheme(draft.input.theme) ? draft.input.theme : DEFAULT_THEME;
       const theme = getTheme(themeKey);
-      const cloneFunnelName = `CC360 AI Funnel Template (${theme.name}-Theme)`;
+      const cloneFunnelName = `Content Generation Studio Funnel (${theme.name}-Theme)`;
       emit({ phase: 'theme-snapshot', status: 'start', theme: themeKey, funnelId: theme.funnelId });
       try {
         if (!theme.funnelId) {
@@ -1684,7 +1689,7 @@ app.post('/api/test-funnel-share', async (req, res) => {
     if (!funnelIdToUse) {
       return res.status(400).json({ error: `Theme "${themeKeyToUse}" has no funnelId mapped, and none provided in body.` });
     }
-    const funnelNameToUse = funnelNameOverride || `CC360 AI Funnel Template (${theme.name}-Theme)`;
+    const funnelNameToUse = funnelNameOverride || `Content Generation Studio Funnel (${theme.name}-Theme)`;
 
     const userAuth = await getActiveUserJwt();
     if (!userAuth?.jwt) {
@@ -1858,8 +1863,8 @@ app.post(
 
       console.log(`📝 [funnel-only] Generating funnel for "${courseTitle}" → ${locationId} (skipImages=${skipImages})...`);
       const funnelContent = await generateFunnelContent({
-        apiKey: OPENAI_API_KEY,
-        model: OPENAI_TEXT_MODEL,
+        apiKey: GEMINI_API_KEY,
+        model: GEMINI_TEXT_MODEL,
         courseTitle: courseTitle.trim(),
         courseDescription: coursePitch.trim(),
         instructorName: instructorName.trim(),
@@ -1871,13 +1876,13 @@ app.post(
 
       let funnelImages = {};
       let funnelImageStats = { total: 0, failed: 0, skipped: skipImages };
-      if (!skipImages && OPENAI_API_KEY) {
+      if (!skipImages && IMAGES_ENABLED) {
         try {
           console.log(`🎨 [funnel-only] Generating funnel images...`);
           const r = await generateFunnelImages({
-            apiKey: OPENAI_API_KEY,
-            model: OPENAI_IMAGE_MODEL,
-            quality: OPENAI_IMAGE_QUALITY,
+            apiKey: GEMINI_API_KEY,
+            model: GEMINI_IMAGE_MODEL,
+            imageSize: GEMINI_IMAGE_SIZE,
             content: funnelContent,
             courseTitle: courseTitle.trim(),
             accent: brandPrimary,
@@ -1957,8 +1962,8 @@ app.post('/api/funnel-only/regenerate/:draftId', async (req, res) => {
 
     console.log(`📝 [funnel-only] Regenerating funnel for "${i.courseTitle}"...`);
     const newContent = await generateFunnelContent({
-      apiKey: OPENAI_API_KEY,
-      model: OPENAI_TEXT_MODEL,
+      apiKey: GEMINI_API_KEY,
+      model: GEMINI_TEXT_MODEL,
       courseTitle: i.courseTitle,
       courseDescription: i.coursePitch,
       instructorName: i.instructorName,
@@ -1971,12 +1976,12 @@ app.post('/api/funnel-only/regenerate/:draftId', async (req, res) => {
     let newImageStats = draft.funnelImageStats?.skipped
       ? { total: 0, failed: 0, skipped: true }
       : { total: 0, failed: 0 };
-    if (!draft.funnelImageStats?.skipped && OPENAI_API_KEY) {
+    if (!draft.funnelImageStats?.skipped && IMAGES_ENABLED) {
       try {
         const r = await generateFunnelImages({
-          apiKey: OPENAI_API_KEY,
-          model: OPENAI_IMAGE_MODEL,
-          quality: OPENAI_IMAGE_QUALITY,
+          apiKey: GEMINI_API_KEY,
+          model: GEMINI_IMAGE_MODEL,
+          imageSize: GEMINI_IMAGE_SIZE,
           content: newContent,
           courseTitle: i.courseTitle,
           accent: i.brandPrimary,
@@ -2054,7 +2059,7 @@ app.post('/api/funnel-only/push/:draftId', async (req, res) => {
     // ────────────────────────────────────────────────────────────────
     const themeKey = isValidTheme(draft.input.theme) ? draft.input.theme : DEFAULT_THEME;
     const theme = getTheme(themeKey);
-    const cloneFunnelName = `CC360 AI Funnel Template (${theme.name}-Theme)`;
+    const cloneFunnelName = `Content Generation Studio Funnel (${theme.name}-Theme)`;
     emit({ phase: 'theme-snapshot', status: 'start', theme: themeKey, funnelId: theme.funnelId });
     try {
       if (!theme.funnelId) {
@@ -2198,7 +2203,7 @@ app.get('/', (_req, res) => {
 // ---------------------------------------------------------------------
 app.listen(PORT, async () => {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(' CC360 Course Studio is running (multi-tenant)');
+  console.log(' Content Generation Studio is running');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(` Open builder:      http://localhost:${PORT}`);
   console.log(` Open setup:        http://localhost:${PORT}/setup`);
@@ -2208,7 +2213,12 @@ app.listen(PORT, async () => {
   }
   console.log(` Regen limit:       ${REGEN_LIMIT} per sub-account`);
   if (oauthConfigured) {
-    const installs = await tokenStore.listInstallations();
+    let installs = [];
+    try {
+      installs = await tokenStore.listInstallations();
+    } catch (e) {
+      console.error(`⚠️  Could not read installs at boot (token store unavailable): ${e.message}`);
+    }
     const subAccts = installs.filter(i => i.kind !== 'company' && i.kind !== 'user-jwt');
     const companies = installs.filter(i => i.kind === 'company');
     console.log(` Auth:              ✅ OAuth (Sub-Account Marketplace App)`);
@@ -2221,11 +2231,11 @@ app.listen(PORT, async () => {
     console.log(` Auth:              ⚠️  PIT only (legacy single-account mode)`);
     console.log(`                    For multi-tenant use, set GHL_CLIENT_ID / SECRET / REDIRECT_URI and visit /setup`);
   }
-  console.log(` Text AI:           OpenAI (${OPENAI_TEXT_MODEL})`);
-  if (OPENAI_API_KEY) {
-    console.log(` Image AI:          OpenAI (${OPENAI_IMAGE_MODEL}, quality=${OPENAI_IMAGE_QUALITY})`);
+  console.log(` Text AI:           Gemini (${GEMINI_TEXT_MODEL})`);
+  if (IMAGES_ENABLED) {
+    console.log(` Image AI:          Gemini (${GEMINI_IMAGE_MODEL}, size=${GEMINI_IMAGE_SIZE}) — requires a PAID Gemini project`);
   } else {
-    console.log(` Image AI:          ⚠️  OPENAI_API_KEY not set — thumbnails will be skipped`);
+    console.log(` Image AI:          ⚠️  OFF (AI_IMAGES=off) — courses/funnels build without thumbnails`);
   }
   console.log(` Backend JWT:       paste at /setup → "User JWT for thumbnail attach" (Postgres-persisted)${CC360_USER_JWT ? ' · CC360_USER_JWT env override is set' : ''}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');

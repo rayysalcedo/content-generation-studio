@@ -1,5 +1,5 @@
 // =====================================================================
-// CC360 PDF-to-Course Builder — CLI mode
+// Content Generation Studio — CLI mode
 // (For the web studio, run `node server.js` instead)
 //
 // Usage: node build-course.js <pdf-path> "<title>" "<audience>" "<instructions>"
@@ -16,7 +16,7 @@ const {
   CC360_JWT,
   CC360_LOCATION_ID,
   GEMINI_API_KEY,
-  GEMINI_MODEL = 'gemini-2.5-flash',
+  GEMINI_TEXT_MODEL = 'gemini-3.7-flash',
   THEME_ACCENT = '#6366f1',
 } = process.env;
 
@@ -42,7 +42,7 @@ async function main() {
   const instructions = instructionsArg.join(' ');
 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(' CC360 PDF → Course Builder (CLI)');
+  console.log(' Content Generation Studio (CLI)');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(` PDF:        ${pdfPath}`);
   console.log(` Title:      ${courseTitle}`);
@@ -56,10 +56,10 @@ async function main() {
   const { text, pages } = await extractPdfText(pdfPath);
   console.log(`   Extracted ${text.length} characters from ${pages} pages`);
 
-  console.log(`🤖 Generating course structure with Gemini (${GEMINI_MODEL})...`);
+  console.log(`🤖 Generating course structure with Gemini (${GEMINI_TEXT_MODEL})...`);
   const structure = await generateCourseStructure({
     apiKey: GEMINI_API_KEY,
-    model: GEMINI_MODEL,
+    model: GEMINI_TEXT_MODEL,
     mode: 'pdf',
     sourceText: text,
     courseTitle,

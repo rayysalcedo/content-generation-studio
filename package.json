@@ -1,7 +1,7 @@
 {
-  "name": "cc360-pdf-to-course",
+  "name": "content-generation-studio",
   "version": "3.3.0",
-  "description": "CC360 Course Studio — OAuth-enabled agency tool. All-OpenAI: generates courses, workbooks, and AI thumbnails into any authorized sub-account. Token store is Postgres-backed (set DATABASE_URL) so installs survive redeploys.",
+  "description": "Content Generation Studio \u2014 turns a PDF or description into a fully built course (modules, lessons, workbooks, funnel) in a CourseCreator360/GHL sub-account via a Private Integration. AI by Google Gemini.",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -10,12 +10,12 @@
     "cli": "node build-course.js"
   },
   "dependencies": {
+    "@google/genai": "^2.19.0",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "form-data": "^4.0.5",
     "multer": "^1.4.5-lts.1",
-    "openai": "^4.65.0",
     "pdf-parse": "^1.1.1",
     "pdfkit": "^0.15.2",
     "pg": "^8.13.0"

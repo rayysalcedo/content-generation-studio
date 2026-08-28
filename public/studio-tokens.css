@@ -1,0 +1,78 @@
+/* Content Generation Studio — design tokens only (light + dark). */
+/* ---------- Tokens ---------------------------------------------------- */
+:root {
+  --sans: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Sora', var(--sans);
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --dur: 160ms;
+}
+
+/* Light: "Mist" — tinted cool canvas, never flat white */
+:root, [data-theme="light"] {
+  color-scheme: light;
+  --bg: #e6e9f0;
+  --bg-deep: #dbe0e9;
+  --surface: #f6f7fa;
+  --surface-2: #eceef4;
+  --surface-3: #e1e4ec;
+  --panel: var(--surface);
+  --panel-2: var(--surface-2);
+  --border: #cfd5e0;
+  --border-strong: #b2bac9;
+  --text: #13161e;
+  --text-dim: #4d5567;
+  --text-faint: #7c8598;
+  --accent: #4a4fe4;
+  --accent-hover: #3a3fd0;
+  --accent-soft: rgba(74, 79, 228, 0.10);
+  --accent-ring: rgba(74, 79, 228, 0.28);
+  --on-accent: #ffffff;
+  --success: #1c9a6a;
+  --success-soft: rgba(28, 154, 106, 0.12);
+  --warn: #b8741a;
+  --warn-soft: rgba(184, 116, 26, 0.12);
+  --danger: #d13b48;
+  --danger-soft: rgba(209, 59, 72, 0.10);
+  --shadow: 0 1px 2px rgba(19, 22, 30, 0.06), 0 8px 24px -12px rgba(19, 22, 30, 0.18);
+  --shadow-lg: 0 24px 60px -24px rgba(19, 22, 30, 0.35);
+  --grid-dot: rgba(19, 22, 30, 0.10);
+  --glow: rgba(74, 79, 228, 0.16);
+}
+
+/* Dark: "Graphite" */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e1016;
+  --bg-deep: #090b10;
+  --surface: #161923;
+  --surface-2: #1c202b;
+  --surface-3: #242938;
+  --panel: var(--surface);
+  --panel-2: var(--surface-2);
+  --border: #2a2f3b;
+  --border-strong: #3b4252;
+  --text: #eceef4;
+  --text-dim: #a3aab9;
+  --text-faint: #6f7789;
+  --accent: #8285ff;
+  --accent-hover: #9b9dff;
+  --accent-soft: rgba(130, 133, 255, 0.14);
+  --accent-ring: rgba(130, 133, 255, 0.34);
+  --on-accent: #0e1016;
+  --success: #34c48c;
+  --success-soft: rgba(52, 196, 140, 0.14);
+  --warn: #e0a24a;
+  --warn-soft: rgba(224, 162, 74, 0.14);
+  --danger: #f06a75;
+  --danger-soft: rgba(240, 106, 117, 0.14);
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -14px rgba(0,0,0,.7);
+  --shadow-lg: 0 30px 70px -28px rgba(0,0,0,.8);
+  --grid-dot: rgba(236, 238, 244, 0.08);
+  --glow: rgba(130, 133, 255, 0.18);
+}
+

@@ -3,153 +3,106 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Content Generation Studio · Setup</title>
+<title>Settings | Content Generation Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/studio.css">
+<script src="/studio.js"></script>
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --panel: #14141e;
-    --panel-2: #1c1c28;
-    --border: #2a2a3a;
-    --text: #f1f1f5;
-    --text-dim: #9595a8;
-    --accent: #6366f1;
-    --accent-hover: #7c7ff5;
-    --success: #10b981;
-    --danger: #ef4444;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 48px 18px 80px;
-  }
-  .page { max-width: 720px; margin: 0 auto; }
-  .brand { display: flex; align-items: center; gap: 10px; color: var(--text-dim); font-size: 13px; margin-bottom: 28px; }
-  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-  h1 { font-size: 38px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 12px; line-height: 1.15; }
-  h1 em { color: var(--accent); font-style: normal; }
-  .lede { color: var(--text-dim); font-size: 16px; line-height: 1.6; margin: 0 0 36px; max-width: 560px; }
-  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 24px 26px; margin-bottom: 18px; }
-  .card h2 { font-size: 18px; margin: 0 0 8px; font-weight: 700; }
-  .card p { color: var(--text-dim); font-size: 14px; line-height: 1.6; margin: 0 0 16px; }
-  .install-btn {
-    display: inline-flex; align-items: center; gap: 10px;
-    background: var(--accent); color: #fff; text-decoration: none;
-    padding: 14px 24px; border-radius: 10px; font-weight: 600; font-size: 15px;
-    transition: background 0.15s; border: none; cursor: pointer;
-  }
-  .install-btn:hover { background: var(--accent-hover); }
-  .install-btn .arrow { transition: transform 0.15s; }
-  .install-btn:hover .arrow { transform: translateX(3px); }
-  .install-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 0; border-bottom: 1px solid var(--border);
-  }
-  .install-row:last-child { border-bottom: none; }
-  .install-info { flex: 1; min-width: 0; }
-  .install-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
-  .install-id { font-family: ui-monospace, monospace; font-size: 12px; color: var(--text-dim); word-break: break-all; }
-  .install-meta { font-size: 12px; color: var(--text-dim); margin-top: 6px; }
-  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; margin-right: 8px; }
-  .pill-ok { background: rgba(16, 185, 129, 0.15); color: var(--success); }
-  .pill-bad { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
-  .empty { color: var(--text-dim); text-align: center; padding: 32px 0; font-size: 14px; }
-  .danger-btn {
-    background: transparent; border: 1px solid var(--border); color: var(--text-dim);
-    padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
-    transition: all 0.15s; margin-left: 12px; flex-shrink: 0;
-  }
-  .danger-btn:hover { border-color: var(--danger); color: var(--danger); }
-  a.back { color: var(--text-dim); text-decoration: none; font-size: 13px; }
-  a.back:hover { color: var(--text); }
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: var(--panel-2); border: 1px solid var(--border); padding: 12px 20px;
-    border-radius: 10px; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  }
-  .toast-ok { border-color: var(--success); }
-  .toast-bad { border-color: var(--danger); }
-  code { font-family: ui-monospace, monospace; background: var(--panel-2); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-  .pill-info { background: rgba(99, 102, 241, 0.15); color: var(--accent); }
+  .card { margin-bottom: 16px; }
+  .card h2 { font-family: var(--display); font-size: 16px; font-weight: 600; margin: 0 0 10px; display: flex; align-items: center; gap: 10px; }
+  .card p { color: var(--text-dim); font-size: 13.5px; margin: 0 0 14px; }
+  .empty { color: var(--text-faint); font-size: 13.5px; padding: 6px 0; }
+  .install-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .install-row:last-child { border-bottom: 0; }
+  .install-name { font-weight: 600; font-size: 14px; }
+  .install-id { font-family: var(--mono); font-size: 11.5px; color: var(--text-faint); margin: 2px 0 6px; }
+  .install-meta { font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .kv { display: grid; grid-template-columns: 140px 1fr; gap: 6px 14px; font-size: 13px; }
+  .kv dt { color: var(--text-faint); }
+  .kv dd { margin: 0; color: var(--text); }
+  #toast-host { position: fixed; bottom: 22px; right: 22px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }
+  .toast { padding: 11px 16px; border-radius: 10px; font-size: 13.5px; font-weight: 600; box-shadow: var(--shadow-lg); animation: rise .18s var(--ease); }
+  .toast-ok { background: var(--success); color: #fff; }
+  .toast-bad { background: var(--danger); color: #fff; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+  details summary { cursor: pointer; font-size: 13px; color: var(--text-dim); font-weight: 600; }
+  details[open] summary { margin-bottom: 12px; }
 </style>
 </head>
 <body>
   <div class="page">
-    <div class="brand"><span class="brand-dot"></span><span>Content Generation Studio · Setup</span></div>
-    <h1>Connect a <em>sub-account</em>.</h1>
-    <p class="lede">
-      Install Content Generation Studio on a CC360 sub-account (or at the agency level) so the tool can push
-      courses, funnels, and media there. Agency-level installs cover every sub-account under
-      that agency — location tokens get minted on demand.
-    </p>
-
-    <div class="card">
-      <h2>Install on a sub-account</h2>
-      <p>You'll be redirected to GoHighLevel. Sign in as a user with admin access, choose where to install (agency or sub-account), and approve the requested permissions. You'll come back here once it's installed.</p>
-      <a class="install-btn" href="/oauth/install">
-        <span>Install Studio</span>
-        <span class="arrow">→</span>
-      </a>
+    <div class="hero" style="margin: 28px 0;">
+      <div class="eyebrow">Settings</div>
+      <h1 class="h1">Connection and <em>maintenance</em>.</h1>
+      <p class="lede" style="margin-bottom:0">How the studio connects to your sub-account, and the session used for thumbnail attach.</p>
     </div>
 
-    <div class="card">
-      <h2>Currently installed</h2>
-      <div id="install-list-host">
-        <div class="empty">Loading…</div>
+    <div class="card section" id="pit-card" style="display:none;">
+      <h2>Connection <span id="pit-status"></span></h2>
+      <p>This studio publishes to one sub-account through a private integration token set on the server.</p>
+      <dl class="kv">
+        <dt>Mode</dt><dd>Private integration</dd>
+        <dt>Sub-account</dt><dd><code id="pit-location"></code></dd>
+      </dl>
+      <p class="mt-16" style="margin-bottom:0">To change the token or sub-account, update <code>CC360_JWT</code> and <code>CC360_LOCATION_ID</code> in the server environment and redeploy.</p>
+    </div>
+
+    <div class="card section" id="install-card">
+      <h2>Install on a sub-account</h2>
+      <p>You will be redirected to sign in, choose where to install, and approve the permissions.</p>
+      <a class="btn btn-primary" href="/oauth/install">Install <i data-icon="arrowRight" class="sm"></i></a>
+      <div class="mt-24">
+        <h2 style="font-size:14px;">Currently installed</h2>
+        <div id="install-list-host"><div class="empty">Loading</div></div>
       </div>
     </div>
 
-    <div class="card">
-      <h2>Thumbnail attach status <span id="jwt-status-pill"></span></h2>
-      <p id="jwt-headline" style="margin-bottom: 16px;">Loading status...</p>
+    <div class="card section">
+      <h2>Thumbnail attach <span id="jwt-status-pill"></span></h2>
+      <p id="jwt-headline" style="margin-bottom: 16px;">Loading status</p>
 
-      <div id="jwt-details" style="background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin: 0 0 16px; font-size: 13px; color: var(--text-dim); line-height: 1.7; display: none;">
-        <div><strong style="color: var(--text);">Auto-sync:</strong> <span id="jwt-source">—</span></div>
-        <div><strong style="color: var(--text);">Last refreshed:</strong> <span id="jwt-synced">—</span></div>
-        <div><strong style="color: var(--text);">JWT expires:</strong> <span id="jwt-expires">—</span></div>
-        <div><strong style="color: var(--text);">User ID:</strong> <code id="jwt-user" style="font-size: 11px;">—</code></div>
+      <div id="jwt-details" class="notice" style="display: none; margin-bottom: 16px;">
+        <i data-icon="key"></i>
+        <dl class="kv" style="margin:0;">
+          <dt>Auto-sync</dt><dd id="jwt-source">-</dd>
+          <dt>Last refreshed</dt><dd id="jwt-synced">-</dd>
+          <dt>Expires</dt><dd id="jwt-expires">-</dd>
+          <dt>User ID</dt><dd><code id="jwt-user" style="font-size:11px;">-</code></dd>
+        </dl>
       </div>
 
       <details style="margin: 0 0 12px;">
-        <summary style="cursor: pointer; font-size: 13px; color: var(--text-dim);">Fallback: capture JWT manually (only needed if auto-sync ever stops working)</summary>
-        <div style="margin-top: 14px; padding: 14px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;">
-          <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 12px;">
-            <strong style="color: var(--text);">Option A — Bookmarklet (one click):</strong> drag this to your bookmarks bar, then click it while on CC360.
-          </div>
-          <a id="jwt-bookmarklet" href="#" style="display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: grab; user-select: none;">🪄 Grab CC360 JWT</a>
+        <summary>Capture a JWT manually (only if auto-sync stops working)</summary>
+        <div class="notice" style="display:block;">
+          <div class="small muted mb-8"><strong>Option A, bookmarklet.</strong> Drag this to your bookmarks bar, then click it while on CC360.</div>
+          <a id="jwt-bookmarklet" href="#" class="btn btn-primary btn-sm" style="cursor: grab; user-select: none;"><i data-icon="key" class="sm"></i> Capture CC360 JWT</a>
 
-          <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);">
-            <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 8px;">
-              <strong style="color: var(--text);">Option B — Paste manually:</strong>
-            </div>
-            <textarea id="jwt-input" placeholder="eyJhbGciOiJSUzI1NiIs..." rows="3" style="width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: ui-monospace, monospace; font-size: 11px; resize: vertical;"></textarea>
-            <button class="install-btn" id="jwt-save-btn" style="padding: 8px 16px; font-size: 13px; margin-top: 8px;">Save pasted JWT</button>
+          <div class="mt-16" style="padding-top: 14px; border-top: 1px solid var(--border);">
+            <div class="small muted mb-8"><strong>Option B, paste manually.</strong></div>
+            <textarea id="jwt-input" placeholder="eyJhbGciOiJSUzI1NiIs" rows="3" class="mono-input" style="font-size: 11px;"></textarea>
+            <button class="btn btn-secondary btn-sm mt-8" id="jwt-save-btn">Save JWT</button>
           </div>
         </div>
       </details>
 
-      <div style="display: flex; gap: 10px; align-items: center; padding-top: 12px; border-top: 1px solid var(--border);">
-        <button class="danger-btn" id="jwt-clear-btn" style="margin-left: 0;">Clear stored JWT</button>
-        <span id="jwt-info" style="font-size: 12px; color: var(--text-dim); margin-left: auto;"></span>
+      <div class="flex between" style="padding-top: 12px; border-top: 1px solid var(--border);">
+        <button class="btn btn-danger btn-sm" id="jwt-clear-btn">Clear stored JWT</button>
+        <span id="jwt-info" class="small faint"></span>
       </div>
-    </div>
-
-    <div style="text-align:center;margin-top:20px;">
-      <a class="back" href="/">← Back to Studio</a>
     </div>
   </div>
 
   <div id="toast-host"></div>
 
+<script>Studio.mountTopbar({ active: "setup" });</script>
 <script>
 const host = document.getElementById('install-list-host');
 const toastHost = document.getElementById('toast-host');
 
 const params = new URLSearchParams(window.location.search);
-if (params.get('installed') === '1') showToast('Installation successful! 🎉', 'ok');
+if (params.get('installed') === '1') showToast('Installed.', 'ok');
 if (params.get('error')) showToast('Install failed: ' + params.get('error'), 'bad');
 
 function showToast(msg, kind = 'ok') {
@@ -161,8 +114,8 @@ function showToast(msg, kind = 'ok') {
 }
 
 function fmtDate(ts) {
-  if (!ts) return '—';
-  try { return new Date(ts).toLocaleString(); } catch (_) { return '—'; }
+  if (!ts) return '-';
+  try { return new Date(ts).toLocaleString(); } catch (_) { return '-'; }
 }
 
 function escapeHtml(s) {
@@ -181,19 +134,19 @@ function render(installs, agencies) {
     ...(installs || []),
   ];
   if (!all.length) {
-    host.innerHTML = '<div class="empty">No installations yet. Click "Install Studio" above to get started.</div>';
+    host.innerHTML = '<div class="empty">No installations yet.</div>';
     return;
   }
   host.innerHTML = all.map(i => {
     const expired = i.expiresAt && i.expiresAt < Date.now();
-    const agencyBadge = i.isAgency ? '<span class="pill pill-info">AGENCY</span> ' : '';
+    const agencyBadge = i.isAgency ? '<span class="badge badge-accent">Agency</span> ' : '';
     return `
       <div class="install-row">
         <div class="install-info">
           <div class="install-name">${escapeHtml(i.locationName || (i.isAgency ? 'Agency' : 'Sub-account'))}</div>
           <div class="install-id">${escapeHtml(i.locationId)}</div>
           <div class="install-meta">
-            ${agencyBadge}<span class="pill ${expired ? 'pill-bad' : 'pill-ok'}">${expired ? 'TOKEN EXPIRED (auto-refreshes)' : 'ACTIVE'}</span>
+            ${agencyBadge}<span class="badge ${expired ? 'badge-danger' : 'badge-success'}">${expired ? 'Token expired (auto-refreshes)' : 'Active'}</span>
             Installed ${fmtDate(i.installedAt)}${i.companyName && !i.isAgency ? ' · ' + escapeHtml(i.companyName) : ''}
           </div>
         </div>
@@ -254,8 +207,8 @@ const jwtBookmarklet = document.getElementById('jwt-bookmarklet');
         try{
           const r=await fetch(S+'/api/user-jwt',{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({jwt:j})});
           const x=await r.json();
-          alert(r.ok?('✅ JWT saved! Valid ~'+x.minutesRemaining+' min.\\nGo back to your tool — thumbnail attach now works.'):('❌ '+(x.error||'Save failed')));
-        }catch(e){alert('❌ Network error: '+e.message)}
+          alert(r.ok?('JWT saved. Valid about '+x.minutesRemaining+' min. Thumbnail attach now works.'):(x.error||'Save failed'));
+        }catch(e){alert('Network error: '+e.message)}
       };
       const re=/eyJ[A-Za-z0-9_-]{20,}\\.[A-Za-z0-9_-]{20,}\\.[A-Za-z0-9_-]{20,}/g;
       let best=null,bestExp=0;
@@ -281,7 +234,7 @@ const jwtBookmarklet = document.getElementById('jwt-bookmarklet');
         }
         return o.apply(this,a);
       };
-      alert('🔍 No JWT in storage. Click any link or page in CC360 — JWT will be auto-captured from the next network request.');
+      alert('No JWT in storage. Click any link or page in CC360 and it will be captured from the next network request.');
     })();
   `.replace(/\s+/g, ' ').trim();
   jwtBookmarklet.href = 'javascript:' + encodeURIComponent(src);
@@ -289,7 +242,7 @@ const jwtBookmarklet = document.getElementById('jwt-bookmarklet');
 
 jwtBookmarklet.addEventListener('click', (e) => {
   e.preventDefault();
-  alert(`📌 To use this bookmarklet:\n\n1. DRAG this button to your bookmarks bar (don't click — drag)\n2. Go to your CC360 tab\n3. Click the "🪄 Grab CC360 JWT" bookmark you just dragged\n\nOR right-click the button → "Bookmark this link"`);
+  alert('To use this bookmarklet:\n\n1. Drag this button to your bookmarks bar (drag, not click)\n2. Go to your CC360 tab\n3. Click the bookmark you just dragged\n\nOr right-click the button and choose "Bookmark this link".');
 });
 
 async function loadJwtStatus() {
@@ -305,10 +258,10 @@ async function loadJwtStatus() {
     const data = await res.json();
 
     if (!data.set) {
-      jwtStatusPill.innerHTML = '<span class="pill pill-bad">NOT SET</span>';
-      jwtHeadline.innerHTML = `No JWT stored yet. Open <code>app.coursecreator360.com</code> in any agency-view page — the Custom JS will auto-push within a few seconds. Refresh this page after.`;
+      jwtStatusPill.innerHTML = '<span class="badge badge-danger">Not set</span>';
+      jwtHeadline.innerHTML = `No JWT stored yet. Open <code>app.coursecreator360.com</code> in any agency page and the Custom JS pushes one within seconds. Then refresh this page.`;
       jwtDetails.style.display = 'none';
-      jwtInfo.textContent = 'Thumbnail attach will be skipped on push.';
+      jwtInfo.textContent = 'Thumbnail attach is skipped on publish.';
       return;
     }
 
@@ -316,27 +269,27 @@ async function loadJwtStatus() {
     jwtSource.textContent = data.source === 'pasted' ? 'CC360 Custom JS auto-sync (or manual paste)' : 'env var CC360_USER_JWT (fallback)';
     jwtSynced.textContent = data.minutesSinceSync != null
       ? `${data.minutesSinceSync} min ago${data.installedAt ? ` · ${new Date(data.installedAt).toLocaleTimeString()}` : ''}`
-      : '—';
+      : '-';
     jwtExpires.textContent = data.expiresAt
       ? `${new Date(data.expiresAt).toLocaleTimeString()} (${data.minutesRemaining >= 0 ? `in ${data.minutesRemaining} min` : `${Math.abs(data.minutesRemaining)} min ago`})`
-      : '—';
-    jwtUser.textContent = data.userId || '—';
+      : '-';
+    jwtUser.textContent = data.userId || '-';
 
     if (data.expired) {
-      jwtStatusPill.innerHTML = '<span class="pill pill-bad">EXPIRED</span>';
-      jwtHeadline.innerHTML = `Last captured JWT has expired. Open or reload your CC360 tab — the Custom JS will push a fresh one within seconds.`;
-      jwtInfo.textContent = `JWT expired — push a course only after the status flips back to ACTIVE.`;
+      jwtStatusPill.innerHTML = '<span class="badge badge-danger">Expired</span>';
+      jwtHeadline.innerHTML = `The last captured JWT has expired. Reload your CC360 tab and a fresh one is pushed within seconds.`;
+      jwtInfo.textContent = `Publish a course after the status returns to Active.`;
     } else if (data.minutesRemaining < 10) {
-      jwtStatusPill.innerHTML = '<span class="pill pill-bad">EXPIRING</span>';
-      jwtHeadline.innerHTML = `Stored JWT expires in <strong>${data.minutesRemaining} min</strong>. Reload your CC360 tab to trigger a fresh auto-push.`;
-      jwtInfo.textContent = `Auto-refresh: open CC360, the snippet pushes a new JWT.`;
+      jwtStatusPill.innerHTML = '<span class="badge badge-warn">Expiring</span>';
+      jwtHeadline.innerHTML = `The stored JWT expires in <strong>${data.minutesRemaining} min</strong>. Reload your CC360 tab to refresh it.`;
+      jwtInfo.textContent = `Opening CC360 refreshes it automatically.`;
     } else {
-      jwtStatusPill.innerHTML = '<span class="pill pill-ok">ACTIVE</span>';
-      jwtHeadline.innerHTML = `✓ Auto-sync is working. Thumbnails will attach on every course push for the next <strong>${data.minutesRemaining} min</strong>.`;
+      jwtStatusPill.innerHTML = '<span class="badge badge-success">Active</span>';
+      jwtHeadline.innerHTML = `Auto-sync is working. Thumbnails attach on every publish for the next <strong>${data.minutesRemaining} min</strong>.`;
       jwtInfo.textContent = `Auto-refreshes every CC360 tab session.`;
     }
   } catch (e) {
-    jwtStatusPill.innerHTML = '<span class="pill pill-bad">ERROR</span>';
+    jwtStatusPill.innerHTML = '<span class="badge badge-danger">Error</span>';
     jwtHeadline.textContent = e.message;
     jwtDetails.style.display = 'none';
   }
@@ -344,7 +297,7 @@ async function loadJwtStatus() {
 
 jwtSaveBtn.addEventListener('click', async () => {
   const jwt = jwtInput.value.trim();
-  if (!jwt) { showToast('Paste a JWT first', 'bad'); return; }
+  if (!jwt) { showToast('Paste a JWT first.', 'bad'); return; }
   jwtSaveBtn.disabled = true;
   try {
     const res = await fetch('/api/user-jwt', {
@@ -354,7 +307,7 @@ jwtSaveBtn.addEventListener('click', async () => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`);
-    showToast(`JWT saved · valid for ~${data.minutesRemaining} min`, 'ok');
+    showToast(`JWT saved. Valid about ${data.minutesRemaining} min.`, 'ok');
     jwtInput.value = '';
     loadJwtStatus();
   } catch (e) {
@@ -365,17 +318,33 @@ jwtSaveBtn.addEventListener('click', async () => {
 });
 
 jwtClearBtn.addEventListener('click', async () => {
-  if (!confirm('Clear the stored User JWT? Thumbnail attach will skip on push until you paste a new one.')) return;
+  if (!confirm('Clear the stored JWT? Thumbnail attach is skipped until a new one is captured.')) return;
   try {
     await fetch('/api/user-jwt', { method: 'DELETE' });
-    showToast('JWT cleared', 'ok');
+    showToast('JWT cleared.', 'ok');
     loadJwtStatus();
   } catch (e) {
     showToast('Clear failed: ' + e.message, 'bad');
   }
 });
 
-loadInstallations();
+async function loadConnection() {
+  try {
+    const cfg = await (await fetch('/api/config')).json();
+    if (cfg.mode === 'pit') {
+      document.getElementById('install-card').style.display = 'none';
+      const pitCard = document.getElementById('pit-card');
+      pitCard.style.display = 'block';
+      document.getElementById('pit-status').innerHTML = cfg.pitConfigured
+        ? '<span class="badge badge-success">Connected</span>'
+        : '<span class="badge badge-danger">Not configured</span>';
+      document.getElementById('pit-location').textContent = cfg.defaultLocationId || 'Not set';
+      return;
+    }
+    loadInstallations();
+  } catch (_) { loadInstallations(); }
+}
+loadConnection();
 loadJwtStatus();
 // Refresh JWT status every 30s while the page is open
 setInterval(loadJwtStatus, 30_000);

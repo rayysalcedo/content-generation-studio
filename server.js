@@ -348,6 +348,10 @@ function renderLessonWorkbookPdf({ structure, accent, mi, li }) {
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+// Front-end libraries served locally (no runtime dependency on a CDN)
+app.use('/vendor/react.js',     express.static(path.join(__dirname, 'node_modules/react/umd/react.production.min.js')));
+app.use('/vendor/react-dom.js', express.static(path.join(__dirname, 'node_modules/react-dom/umd/react-dom.production.min.js')));
+app.use('/vendor/babel.js',     express.static(path.join(__dirname, 'node_modules/@babel/standalone/babel.min.js')));
 
 // File uploads land in uploads/ — multer manages temp storage
 // Accept multiple named fields: pdf (course) and instructorPhoto (funnel)
@@ -1428,6 +1432,8 @@ app.get('/api/config', (_req, res) => {
     multiTenant: true,
     defaultLocationId: CC360_LOCATION_ID || null,    // used by the form as an initial hint, optional
     regenLimit: Number(REGEN_LIMIT),
+    mode: oauthConfigured ? 'oauth' : 'pit',         // how the app authenticates to CC360
+    pitConfigured: !!CC360_JWT,
   });
 });
 

@@ -1,7 +1,7 @@
 {
   "name": "content-generation-studio",
   "version": "3.3.0",
-  "description": "Content Generation Studio \u2014 turns a PDF or description into a fully built course (modules, lessons, workbooks, funnel) in a CourseCreator360/GHL sub-account via a Private Integration. AI by Google Gemini.",
+  "description": "Content Generation Studio — turns a PDF or description into a fully built course (modules, lessons, workbooks, funnel) in a CourseCreator360/GHL sub-account via a Private Integration. AI by Google Gemini.",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "cli": "node build-course.js"
   },
   "dependencies": {
+    "@babel/standalone": "^8.0.4",
     "@google/genai": "^2.19.0",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
@@ -18,6 +19,8 @@
     "multer": "^1.4.5-lts.1",
     "pdf-parse": "^1.1.1",
     "pdfkit": "^0.15.2",
-    "pg": "^8.13.0"
+    "pg": "^8.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

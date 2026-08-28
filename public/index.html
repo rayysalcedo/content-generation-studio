@@ -6,698 +6,262 @@
 <title>Content Generation Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/studio.css">
+<script src="/studio.js"></script>
 <style>
-  :root {
-    --bg: #fafaf7;
-    --surface: #ffffff;
-    --border: #e5e5e0;
-    --border-strong: #d4d4d0;
-    --text: #1a1a1a;
-    --text-dim: #525252;
-    --text-faint: #8a8a85;
-    --accent: #6366f1;
-    --accent-hover: #4f46e5;
-    --accent-soft: #eef2ff;
-    --danger: #dc2626;
-    --display: 'Fraunces', serif;
-    --sans: 'Inter', system-ui, sans-serif;
-    --mono: 'JetBrains Mono', monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    line-height: 1.5;
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-  }
-  body {
-    background-image:
-      radial-gradient(circle at 20% 0%, rgba(99, 102, 241, 0.06), transparent 40%),
-      radial-gradient(circle at 80% 100%, rgba(99, 102, 241, 0.04), transparent 40%);
-    background-attachment: fixed;
-  }
-  .page { max-width: 720px; margin: 0 auto; padding: 56px 32px 96px; }
-
-  /* Header */
-  .brand {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 56px;
-    font-family: var(--mono); font-size: 13px;
-    color: var(--text-dim);
-  }
-  .brand-dot {
-    width: 8px; height: 8px;
-    background: var(--accent);
-    border-radius: 50%;
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
-  }
-
-  .eyebrow {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    margin-bottom: 16px;
-  }
-  h1 {
-    font-family: var(--display);
-    font-weight: 400;
-    font-size: clamp(38px, 6vw, 56px);
-    line-height: 1.04;
-    letter-spacing: -0.02em;
-    margin-bottom: 20px;
-  }
-  h1 em { font-style: italic; color: var(--accent); }
-  .lede {
-    font-size: 17px; color: var(--text-dim);
-    max-width: 560px; line-height: 1.55;
-    margin-bottom: 48px;
-  }
-
-  /* Mode toggle */
-  .mode-toggle {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 4px;
-    margin-bottom: 32px;
-  }
-  .mode-btn {
-    padding: 14px 16px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    border-radius: 6px;
-    font-family: var(--sans);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-dim);
-    transition: all 0.15s;
-  }
-  .mode-btn.active {
-    background: var(--text);
-    color: var(--surface);
-  }
-  .mode-btn-icon {
-    font-size: 18px;
-    margin-right: 6px;
-    vertical-align: middle;
-  }
-
-  /* Form */
-  .form {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 36px;
-  }
-  .field { margin-bottom: 24px; }
-  .field:last-of-type { margin-bottom: 0; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .label {
-    display: flex; align-items: baseline; justify-content: space-between;
-    margin-bottom: 8px;
-  }
-  .label-text {
-    font-family: var(--mono); font-size: 11px;
-    text-transform: uppercase; letter-spacing: 0.08em;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .label-required { font-family: var(--mono); font-size: 10px; color: var(--accent); }
-  .label-hint { font-size: 12px; color: var(--text-faint); }
-
-  input[type="text"], input[type="number"], textarea, select {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border-strong);
-    border-radius: 6px;
-    padding: 12px 14px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 15px;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-  input:focus, textarea:focus, select:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
-  }
-  textarea { resize: vertical; min-height: 120px; font-family: var(--sans); }
-  ::placeholder { color: var(--text-faint); }
-
-/* Dropzone */
-  .dropzone {
-    position: relative;
-    display: block;
-    width: 100%;
-    border: 1.5px dashed var(--border-strong);
-    border-radius: 6px;
-    padding: 28px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.15s;
-    background: var(--bg);
-    overflow: hidden;
-  }
-  .dropzone:hover, .dropzone.dragging { border-color: var(--accent); background: var(--accent-soft); }
-  .dropzone input[type="file"] {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    z-index: 1;
-  }
-  .dropzone .dz-primary,
-  .dropzone .dz-secondary {
-    position: relative;
-    z-index: 0;
-    pointer-events: none;
-  }
-  
-  .dz-primary { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
-  .dz-primary span { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-  .dz-secondary { font-family: var(--mono); font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
-  .file-preview {
-    display: none; margin-top: 10px;
-    padding: 10px 14px;
-    background: var(--accent-soft);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    align-items: center; gap: 10px;
-    font-size: 14px;
-  }
-  .file-preview.visible { display: flex; }
-  .file-preview .fp-name { flex: 1; font-weight: 500; }
-  .file-preview .fp-meta { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
-  .file-preview .fp-remove { background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px; }
-
-  /* Color swatches */
-  .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
-  .swatch {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: transform 0.1s, border-color 0.1s;
-  }
-  .swatch:hover { transform: scale(1.1); }
-  .swatch.selected { border-color: var(--text); }
-  /* Custom-hex "+" swatch */
-  .swatch-custom {
-    background: #fff;
-    border: 2px dashed var(--border-strong, #cbd5e1);
-    display: inline-flex; align-items: center; justify-content: center;
-    color: var(--text-dim, #64748b);
-  }
-  .swatch-custom .swatch-custom-icon { font-size: 18px; font-weight: 400; line-height: 1; }
-  .swatch-custom:hover {
-    border-color: var(--text);
-    color: var(--text);
-    background: var(--accent-soft, #eef2ff);
-  }
-  .swatch-custom.selected {
-    border-style: solid;
-    border-color: var(--text);
-  }
-  /* Custom hex inline editor — only shown after clicking the + swatch */
-  .custom-hex-row {
-    display: flex; align-items: center; gap: 10px;
-    margin-top: 10px;
-    padding: 10px 12px;
-    background: var(--bg-soft, #f8fafc);
-    border: 1px solid var(--border, #e2e8f0);
-    border-radius: 8px;
-  }
-  .custom-hex-row input[type="color"] {
-    width: 36px; height: 36px;
-    border: 1px solid var(--border-strong, #cbd5e1);
-    border-radius: 6px;
-    padding: 2px;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-  .custom-hex-row input[type="text"] {
-    width: 110px;
-    font-family: ui-monospace, monospace;
-    text-transform: uppercase;
-    padding: 7px 10px;
-    font-size: 13px;
-  }
-  .custom-hex-hint {
-    font-size: 11.5px; color: var(--text-dim, #64748b); line-height: 1.4;
-    flex: 1;
-  }
-
-  /* Workbook toggle */
-  .workbook-toggle {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 16px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    background: #fafafa;
-  }
-  .workbook-toggle:hover { border-color: var(--accent); background: var(--accent-soft); }
-  .workbook-toggle input[type="checkbox"] { display: none; }
-  .toggle-track {
-    flex-shrink: 0;
-    width: 40px;
-    height: 24px;
-    background: #cbd5e1;
-    border-radius: 12px;
-    position: relative;
-    transition: background 0.2s;
-    margin-top: 2px;
-  }
-  .toggle-thumb {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 20px;
-    height: 20px;
-    background: white;
-    border-radius: 50%;
-    transition: transform 0.2s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  }
-  .workbook-toggle input:checked + .toggle-track { background: var(--accent); }
-  .workbook-toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(16px); }
-  .toggle-label { display: flex; flex-direction: column; gap: 4px; }
-  .toggle-title { font-weight: 600; font-size: 14px; color: var(--text); }
-  .toggle-desc { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
-
-  /* Submit */
-  .submit-row {
-    margin-top: 32px;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap;
-  }
-  .submit-meta {
-    font-family: var(--mono); font-size: 11px;
-    color: var(--text-faint);
-    text-transform: uppercase; letter-spacing: 0.06em;
-  }
-  button.submit {
-    background: var(--text);
-    color: var(--surface);
-    border: none;
-    padding: 14px 28px;
-    font-family: var(--sans);
-    font-size: 14px; font-weight: 600;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: inline-flex; align-items: center; gap: 10px;
-  }
-  button.submit:hover:not(:disabled) { background: #000; }
-  button.submit:disabled { opacity: 0.5; cursor: not-allowed; }
-  .arrow { transition: transform 0.15s; }
-  button.submit:hover:not(:disabled) .arrow { transform: translateX(3px); }
-
-  .spinner {
-    width: 14px; height: 14px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: var(--surface);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .error {
-    background: #fef2f2; color: var(--danger);
-    padding: 12px 16px; border-radius: 6px;
-    border: 1px solid #fecaca;
-    font-size: 14px;
-    margin-top: 16px;
-    display: none;
-  }
-  .error.visible { display: block; }
-
-  /* Hidden by default until JS picks mode */
-  .pdf-only, .desc-only { display: none; }
-  body[data-mode="pdf"] .pdf-only { display: block; }
-  body[data-mode="description"] .desc-only { display: block; }
-
-  @media (max-width: 540px) {
-    .page { padding: 36px 18px 64px; }
-    .form { padding: 24px 18px; }
-    .row { grid-template-columns: 1fr; }
-  }
-  /* ─────────────────────────────────────────────────────────────────
-     Generation Progress Modal — shown while /api/generate streams events
-     ───────────────────────────────────────────────────────────────── */
-  .gen-progress-backdrop {
-    position: fixed; inset: 0; z-index: 300;
-    background: rgba(15, 23, 42, 0.55);
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-    opacity: 0; pointer-events: none;
-    transition: opacity 180ms ease;
-  }
-  .gen-progress-backdrop.visible { opacity: 1; pointer-events: auto; }
-  .gen-progress-modal {
-    background: #ffffff;
-    border-radius: 16px;
-    width: 100%;
-    max-width: 480px;
-    padding: 28px 28px 22px;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.36);
-    transform: translateY(8px);
-    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .gen-progress-backdrop.visible .gen-progress-modal { transform: translateY(0); }
-  .gp-icon { font-size: 34px; line-height: 1; margin-bottom: 6px; }
-  .gp-title {
-    font-family: var(--display, ui-serif, serif);
-    font-size: 22px; font-weight: 500; margin: 0 0 6px; color: var(--text, #0f172a);
-  }
-  .gp-sub {
-    font-size: 13px; color: var(--text-dim, #64748b);
-    margin: 0 0 18px; min-height: 18px; line-height: 1.5;
-    transition: color 200ms;
-  }
-  .gp-bar {
-    height: 8px; background: #eef2ff; border-radius: 999px;
-    overflow: hidden; margin-bottom: 18px;
-  }
-  .gp-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent, #6366f1) 0%, #a78bfa 100%);
-    border-radius: 999px;
-    transition: width 480ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .gp-phase-list {
-    list-style: none; padding: 0; margin: 0 0 16px;
-    display: flex; flex-direction: column; gap: 9px;
-  }
-  .gp-phase {
-    display: flex; align-items: center; gap: 11px;
-    padding: 8px 10px; border-radius: 8px;
-    font-size: 13px; color: var(--text-dim, #64748b);
-    background: transparent;
-    transition: background 160ms, color 160ms;
-  }
-  .gp-phase-icon {
-    width: 22px; height: 22px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 50%;
-    background: #f1f5f9; color: #94a3b8;
-    font-size: 12px; font-weight: 700;
-  }
-  .gp-phase-label { flex: 1; }
-  .gp-phase-meta { color: #94a3b8; font-size: 12px; font-variant-numeric: tabular-nums; }
-  /* Active — pulses */
-  .gp-phase-active {
-    background: #eef2ff; color: #0f172a; font-weight: 500;
-  }
-  .gp-phase-active .gp-phase-icon {
-    background: var(--accent, #6366f1); color: #fff;
-    animation: gp-spin 1.4s linear infinite;
-  }
-  @keyframes gp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  /* Done */
-  .gp-phase-done { color: #0f172a; }
-  .gp-phase-done .gp-phase-icon { background: #dcfce7; color: #15803d; }
-  /* Failed */
-  .gp-phase-failed { color: #b91c1c; }
-  .gp-phase-failed .gp-phase-icon { background: #fee2e2; color: #b91c1c; }
-  .gp-footnote {
-    font-size: 11.5px; color: #94a3b8; line-height: 1.5;
-    padding-top: 14px; border-top: 1px solid #f1f5f9;
-  }
+  .hero { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; margin: 28px 0 28px; }
+  @media (max-width: 720px) { .hero { grid-template-columns: 1fr; } }
+  .hero-meta { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+  @media (max-width: 720px) { .hero-meta { align-items: flex-start; } }
+  .mode-switch { margin-bottom: 20px; }
+  body[data-mode="pdf"] .desc-only { display: none !important; }
+  body[data-mode="description"] .pdf-only { display: none !important; }
+  .funnel-block { margin-top: 16px; padding: 18px 18px 4px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); }
+  .submit-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .submit-note { font-size: 12.5px; color: var(--text-faint); display: flex; align-items: center; gap: 6px; }
 </style>
 </head>
 <body data-mode="pdf">
   <div class="page">
-    <div class="brand" style="display:flex; align-items:center;">
-      <span class="brand-dot"></span>
-      <span>Content Generation Studio</span>
-      <a href="/funnel-only" style="margin-left:auto; font-size:11px; color:var(--text-dim); text-decoration:none; font-family:var(--mono); text-transform:uppercase; letter-spacing:0.08em; padding:5px 12px; border:1px solid var(--border); border-radius:999px; transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-dim)';">Funnel only →</a>
+    <div class="hero">
+      <div>
+        <div class="eyebrow">New course</div>
+        <h1 class="h1">Turn a document or an idea into a <em>finished course</em>.</h1>
+        <p class="lede" style="margin-bottom:0">Upload material or describe what to teach. Review the outline, lessons, and optional funnel, then publish to your sub-account.</p>
+      </div>
+      <div class="hero-meta">
+        <span class="badge"><i data-icon="clock" class="sm"></i> 3 to 10 minutes</span>
+      </div>
     </div>
 
-    <div class="eyebrow">Step 01 — Generate</div>
-    <h1>Build a <em>course</em><br/>and <em>AI funnel</em><br/>from a PDF or idea.</h1>
-    <p class="lede">
-      Upload existing course material or describe a new concept. We'll structure the
-      course, draft every lesson, optionally write a complete 3-step sales funnel,
-      and let you review everything before pushing to your CC360 sub-account.
-    </p>
-
-    <!-- Mode toggle -->
-    <div class="mode-toggle">
-      <button type="button" class="mode-btn active" data-mode="pdf"><span class="mode-btn-icon">📄</span>From PDF</button>
-      <button type="button" class="mode-btn" data-mode="description"><span class="mode-btn-icon">✨</span>From Description</button>
+    <div class="segmented mode-switch" role="tablist">
+      <button type="button" class="mode-btn active" data-mode="pdf" role="tab"><i data-icon="file"></i>From a PDF</button>
+      <button type="button" class="mode-btn" data-mode="description" role="tab"><i data-icon="pen"></i>From a description</button>
     </div>
 
-    <form class="form" id="course-form">
-      <!-- AGENCY: Target Sub-Account -->
-      <div class="field">
-        <div class="label">
-          <span class="label-text">Sub-Account Location ID</span>
-          <span class="label-required">required</span>
-        </div>
-        <input
-          type="text"
-          name="locationId"
-          id="locationId"
-          placeholder="e.g. ITeSh9QmCqRSsZwtBCZX"
-          pattern="^[a-zA-Z0-9]{15,30}$"
-          autocomplete="off"
-          spellcheck="false"
-          required
-          style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:0.02em;"
-        />
-        <div style="font-size:12px;color:var(--text-dim);margin-top:6px;line-height:1.5;">
-          The CC360 sub-account this course will be published to.
-          Find it in the URL when viewing a sub-account: <code style="font-family:ui-monospace,monospace;">/location/<strong>&lt;ID&gt;</strong>/</code>
-        </div>
-      </div>
+    <form class="card" id="course-form" novalidate>
 
-      <!-- COMMON FIELDS -->
-      <div class="field">
-        <div class="label">
-          <span class="label-text">Course Title</span>
-          <span class="label-required">required</span>
-        </div>
-        <input type="text" name="courseTitle" id="courseTitle" placeholder="e.g. Real Estate Investing for Beginners" required />
-      </div>
-
-      <div class="field">
-        <div class="label">
-          <span class="label-text">Target Audience</span>
-          <span class="label-hint">optional</span>
-        </div>
-        <input type="text" name="targetAudience" id="targetAudience" placeholder="e.g. First-time investors with no prior experience" />
-      </div>
-
-      <!-- PDF MODE -->
-      <div class="field pdf-only">
-        <div class="label">
-          <span class="label-text">Course Document</span>
-          <span class="label-required">required</span>
-        </div>
-        <label class="dropzone" id="dropzone">
-          <input type="file" name="pdf" id="pdf-input" accept=".pdf,application/pdf" />
-          <div class="dz-primary">Drop your PDF or <span>browse</span></div>
-          <div class="dz-secondary">PDF · max 25 MB</div>
-        </label>
-        <div class="file-preview" id="file-preview">
-          <span style="font-size:18px;">📄</span>
-          <div style="flex:1;min-width:0;">
-            <div class="fp-name" id="fp-name">—</div>
-            <div class="fp-meta" id="fp-meta">—</div>
+      <!-- Destination -->
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Destination</div>
+            <div class="section-desc">Where the course is published.</div>
           </div>
-          <button type="button" class="fp-remove" id="fp-remove">✕</button>
         </div>
-      </div>
-
-      <!-- DESCRIPTION MODE -->
-      <div class="field desc-only">
-        <div class="label">
-          <span class="label-text">Course Description</span>
-          <span class="label-required">required</span>
-        </div>
-        <textarea name="description" id="description" placeholder="Describe what the course should teach. Be specific — the more context you provide, the better the AI can structure the curriculum.&#10;&#10;Example: A practical course teaching first-time real estate investors how to find their first rental property, evaluate deals, secure financing, and manage tenants. Include hands-on examples, common pitfalls, and a beginner-friendly tone."></textarea>
-      </div>
-
-      <div class="row desc-only">
-        <div class="field" style="margin-bottom:0;">
+        <div class="field">
           <div class="label">
-            <span class="label-text">Modules</span>
-            <span class="label-hint">leave empty for auto</span>
+            <span class="label-text">Sub-account ID</span>
+            <span class="label-required">Required</span>
           </div>
-          <input type="number" name="moduleCount" id="moduleCount" placeholder="Auto (5)" min="1" />
+          <input type="text" name="locationId" id="locationId" class="mono" placeholder="ITeSh9QmCqRSsZwtBCZX" pattern="^[a-zA-Z0-9]{15,30}$" autocomplete="off" spellcheck="false" required />
+          <div class="help">From the sub-account URL: <code>/location/<strong>ID</strong>/</code></div>
         </div>
-        <div class="field" style="margin-bottom:0;">
+      </div>
+
+      <!-- Source -->
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Course</div>
+            <div class="section-desc">Title, audience, and source material.</div>
+          </div>
+        </div>
+
+        <div class="field">
           <div class="label">
-            <span class="label-text">Lessons / module</span>
-            <span class="label-hint">leave empty for auto</span>
+            <span class="label-text">Title</span>
+            <span class="label-required">Required</span>
           </div>
-          <input type="number" name="lessonsPerModule" id="lessonsPerModule" placeholder="Auto (5)" min="1" />
+          <input type="text" name="courseTitle" id="courseTitle" placeholder="Real Estate Investing for Beginners" required />
+        </div>
+
+        <div class="field">
+          <div class="label">
+            <span class="label-text">Audience</span>
+            <span class="label-hint">Optional</span>
+          </div>
+          <input type="text" name="targetAudience" id="targetAudience" placeholder="First-time investors" />
+        </div>
+
+        <div class="field pdf-only">
+          <div class="label">
+            <span class="label-text">Document</span>
+            <span class="label-required">Required</span>
+          </div>
+          <label class="dropzone" id="dropzone">
+            <input type="file" name="pdf" id="pdf-input" accept=".pdf,application/pdf" />
+            <div class="dz-icon"><i data-icon="upload" class="xl"></i></div>
+            <div class="dz-primary">Drop a PDF or <span>browse</span></div>
+            <div class="dz-secondary">Up to 25 MB</div>
+          </label>
+          <div class="file-chip" id="file-preview">
+            <i data-icon="file" class="lg"></i>
+            <div style="flex:1;min-width:0;">
+              <div class="fc-name" id="fp-name"></div>
+              <div class="fc-meta" id="fp-meta"></div>
+            </div>
+            <button type="button" class="fc-remove" id="fp-remove" aria-label="Remove file"><i data-icon="x"></i></button>
+          </div>
+        </div>
+
+        <div class="field desc-only">
+          <div class="label">
+            <span class="label-text">Description</span>
+            <span class="label-required">Required</span>
+          </div>
+          <textarea name="description" id="description" placeholder="What the course teaches, who it is for, and the outcome. Example: A practical course for first-time real estate investors covering how to find a rental property, evaluate deals, secure financing, and manage tenants."></textarea>
+        </div>
+
+        <div class="row desc-only">
+          <div class="field">
+            <div class="label">
+              <span class="label-text">Modules</span>
+              <span class="label-hint">Auto if empty</span>
+            </div>
+            <input type="number" name="moduleCount" id="moduleCount" placeholder="5" min="1" />
+          </div>
+          <div class="field">
+            <div class="label">
+              <span class="label-text">Lessons per module</span>
+              <span class="label-hint">Auto if empty</span>
+            </div>
+            <input type="number" name="lessonsPerModule" id="lessonsPerModule" placeholder="5" min="1" />
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label">
+            <span class="label-text">Instructions</span>
+            <span class="label-hint">Optional</span>
+          </div>
+          <textarea name="instructions" id="instructions" placeholder="Keep the tone conversational. Add action steps to each lesson." style="min-height:72px;"></textarea>
+        </div>
+
+        <div class="field">
+          <div class="label">
+            <span class="label-text">Brand color</span>
+            <span class="label-hint">Used on lesson pages</span>
+          </div>
+          <div class="swatches" id="swatches">
+            <button type="button" class="swatch selected" data-color="#2563eb" title="Blue"    style="background:#2563eb;"></button>
+            <button type="button" class="swatch"          data-color="#10b981" title="Green"   style="background:#10b981;"></button>
+            <button type="button" class="swatch"          data-color="#f59e0b" title="Amber"   style="background:#f59e0b;"></button>
+            <button type="button" class="swatch"          data-color="#f43f5e" title="Rose"    style="background:#f43f5e;"></button>
+            <button type="button" class="swatch"          data-color="#475569" title="Slate"   style="background:#475569;"></button>
+            <button type="button" class="swatch swatch-custom" id="swatchCustom" title="Custom" aria-label="Custom color"><i data-icon="plus" class="sm"></i></button>
+          </div>
+          <div class="custom-hex-row" id="customHexRow" style="display:none;">
+            <input type="color" id="accentColorPicker" value="#2563eb" />
+            <input type="text" id="accentHexInput" value="#2563EB" maxlength="7" pattern="^#[0-9a-fA-F]{6}$" placeholder="#RRGGBB" />
+          </div>
+          <input type="hidden" name="accent" id="accent" value="#2563eb" />
         </div>
       </div>
 
-      <!-- COMMON: Instructions, Color -->
-      <div class="field" style="margin-top:24px;">
-        <div class="label">
-          <span class="label-text">Special Instructions</span>
-          <span class="label-hint">optional</span>
+      <!-- Extras -->
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <div class="section-title">Extras</div>
+            <div class="section-desc">Each one adds generation time.</div>
+          </div>
         </div>
-        <textarea name="instructions" id="instructions" placeholder="e.g. Keep tone conversational. Include action steps in each lesson." style="min-height:72px;"></textarea>
+        <div class="stack">
+          <label class="switch" for="generateWorkbooks">
+            <input type="checkbox" id="generateWorkbooks" name="generateWorkbooks" />
+            <span class="switch-track"></span>
+            <span>
+              <span class="switch-title">Lesson workbooks</span>
+              <span class="switch-desc">A printable PDF per lesson with questions, action items, and reflection prompts.</span>
+            </span>
+          </label>
+
+          <label class="switch" for="generateThumbnails">
+            <input type="checkbox" id="generateThumbnails" name="generateThumbnails" />
+            <span class="switch-track"></span>
+            <span>
+              <span class="switch-title">Thumbnails</span>
+              <span class="switch-desc">A cover image for the course and an icon for each lesson. Needs image generation enabled on the server.</span>
+            </span>
+          </label>
+
+          <label class="switch" for="generateFunnel">
+            <input type="checkbox" id="generateFunnel" name="generateFunnel" />
+            <span class="switch-track"></span>
+            <span>
+              <span class="switch-title">Sales funnel</span>
+              <span class="switch-desc">Sales page, checkout, and confirmation pages with complete copy.</span>
+            </span>
+          </label>
+        </div>
+
+        <div id="funnel-fields" class="funnel-block" style="display:none;">
+          <div class="row">
+            <div class="field">
+              <div class="label">
+                <span class="label-text">Instructor first name</span>
+                <span class="label-required">Required</span>
+              </div>
+              <input type="text" name="instructorName" id="instructorName" placeholder="Jane" />
+            </div>
+            <div class="field">
+              <div class="label">
+                <span class="label-text">Price</span>
+                <span class="label-required">Required</span>
+              </div>
+              <input type="text" name="coursePrice" id="coursePrice" value="$497 one time" placeholder="$997 one time" />
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label">
+              <span class="label-text">Instructor photo</span>
+              <span class="label-hint">JPG or PNG, up to 8 MB</span>
+            </div>
+            <label class="dropzone" id="photo-dropzone" style="padding:20px 16px;">
+              <input type="file" name="instructorPhoto" id="instructor-photo-input" accept="image/jpeg,image/png,image/webp" />
+              <div class="dz-icon"><i data-icon="camera" class="lg"></i></div>
+              <div class="dz-primary">Drop a photo or <span>browse</span></div>
+              <div class="dz-secondary">A headshot works best</div>
+            </label>
+            <div class="file-chip" id="photo-preview">
+              <i data-icon="image" class="lg"></i>
+              <div style="flex:1;min-width:0;">
+                <div class="fc-name" id="photo-name"></div>
+                <div class="fc-meta" id="photo-meta"></div>
+              </div>
+              <button type="button" class="fc-remove" id="photo-remove" aria-label="Remove photo"><i data-icon="x"></i></button>
+            </div>
+          </div>
+
+          <div class="field pdf-only">
+            <div class="label">
+              <span class="label-text">Pitch</span>
+              <span class="label-required">Required with a PDF</span>
+            </div>
+            <textarea name="funnelPitch" id="funnelPitch" placeholder="One to three sentences: what the course delivers, who it is for, and why it matters." style="min-height:80px;"></textarea>
+          </div>
+          <div class="help desc-only" style="margin:0 0 14px;">The description above is used as the funnel pitch.</div>
+        </div>
       </div>
 
-      <div class="field">
-        <div class="label">
-          <span class="label-text">Brand Color</span>
-          <span class="label-hint">applies to lesson design</span>
-        </div>
-        <div class="swatches" id="swatches">
-          <button type="button" class="swatch selected" data-color="#2563eb" title="Ocean"   style="background:#2563eb;"></button>
-          <button type="button" class="swatch"          data-color="#10b981" title="Emerald" style="background:#10b981;"></button>
-          <button type="button" class="swatch"          data-color="#f59e0b" title="Amber"   style="background:#f59e0b;"></button>
-          <button type="button" class="swatch"          data-color="#f43f5e" title="Rose"    style="background:#f43f5e;"></button>
-          <button type="button" class="swatch"          data-color="#475569" title="Slate"   style="background:#475569;"></button>
-          <button type="button" class="swatch swatch-custom" id="swatchCustom" title="Custom hex" aria-label="Custom hex color">
-            <span class="swatch-custom-icon">+</span>
+      <!-- Submit -->
+      <div class="section">
+        <div class="submit-row">
+          <span class="submit-note"><i data-icon="info" class="sm"></i> You review everything before anything is published.</span>
+          <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+            <span class="btn-label">Generate outline</span>
+            <span class="arrow"><i data-icon="arrowRight"></i></span>
           </button>
         </div>
-        <div class="custom-hex-row" id="customHexRow" style="display:none;">
-          <input type="color" id="accentColorPicker" value="#2563eb" />
-          <input type="text" id="accentHexInput" value="#2563EB" maxlength="7" pattern="^#[0-9a-fA-F]{6}$" placeholder="#RRGGBB" />
-          <span class="custom-hex-hint">Custom hex applies to lesson pages only — funnel uses its own theme.</span>
-        </div>
-        <input type="hidden" name="accent" id="accent" value="#2563eb" />
+        <div class="notice notice-danger error" id="error"></div>
       </div>
-
-      <div class="field">
-        <div class="label">
-          <span class="label-text">Lesson Workbooks</span>
-          <span class="label-hint">printable PDF per lesson with questions, action items & reflection</span>
-        </div>
-        <label class="workbook-toggle" for="generateWorkbooks">
-          <input type="checkbox" id="generateWorkbooks" name="generateWorkbooks" />
-          <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          <span class="toggle-label">
-            <span class="toggle-title">Generate workbook PDFs</span>
-            <span class="toggle-desc">A "Download Workbook" button gets added to each lesson page in CC360.</span>
-          </span>
-        </label>
-      </div>
-
-      <div class="field">
-        <div class="label">
-          <span class="label-text">AI Thumbnails</span>
-          <span class="label-hint">cartoon hero image for the course + icon per lesson</span>
-        </div>
-        <label class="workbook-toggle" for="generateThumbnails">
-          <input type="checkbox" id="generateThumbnails" name="generateThumbnails" />
-          <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          <span class="toggle-label">
-            <span class="toggle-title">Generate AI thumbnails</span>
-            <span class="toggle-desc">Friendly cartoon course cover + a thumbnail icon for every lesson, generated by Google Gemini (Nano Banana). Requires a paid Gemini project — skipped when AI_IMAGES=off.</span>
-          </span>
-        </label>
-      </div>
-
-      <!-- ============================================== -->
-      <!-- FUNNEL TOGGLE — generates 3-step sales funnel  -->
-      <!-- ============================================== -->
-      <div class="field">
-        <div class="label">
-          <span class="label-text">AI Funnel</span>
-          <span class="label-hint">3-step sales funnel: sales page · checkout · confirmation</span>
-        </div>
-        <label class="workbook-toggle" for="generateFunnel">
-          <input type="checkbox" id="generateFunnel" name="generateFunnel" />
-          <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          <span class="toggle-label">
-            <span class="toggle-title">Generate AI funnel</span>
-            <span class="toggle-desc">Writes every section of a complete sales funnel (hero, problem/solution, modules, testimonials, pricing, FAQ, checkout, confirmation) and generates module thumbnails + a laptop mockup.</span>
-          </span>
-        </label>
-      </div>
-
-      <!-- Funnel-only fields, shown when the toggle above is on -->
-      <div id="funnel-fields" style="display:none; border-left: 2px solid var(--accent); padding-left: 18px; margin-bottom: 24px;">
-        <div class="row">
-          <div class="field" style="margin-bottom:18px;">
-            <div class="label">
-              <span class="label-text">Instructor First Name</span>
-              <span class="label-required">required for funnel</span>
-            </div>
-            <input type="text" name="instructorName" id="instructorName" placeholder="e.g. Jane" />
-          </div>
-          <div class="field" style="margin-bottom:18px;">
-            <div class="label">
-              <span class="label-text">Course Price</span>
-              <span class="label-required">required for funnel</span>
-            </div>
-            <input type="text" name="coursePrice" id="coursePrice" value="$497 one time" placeholder="e.g. $997 one time" />
-          </div>
-        </div>
-
-        <div class="field" style="margin-bottom:18px;">
-          <div class="label">
-            <span class="label-text">Instructor Photo</span>
-            <span class="label-required">required for funnel · max 8 MB · JPG/PNG</span>
-          </div>
-          <label class="dropzone" id="photo-dropzone" style="padding:20px 16px;">
-            <input type="file" name="instructorPhoto" id="instructor-photo-input" accept="image/jpeg,image/png,image/webp" />
-            <div class="dz-primary">Drop a photo or <span>browse</span></div>
-            <div class="dz-secondary">Headshot recommended</div>
-          </label>
-          <div class="file-preview" id="photo-preview">
-            <span style="font-size:16px;">📷</span>
-            <div style="flex:1;min-width:0;">
-              <div class="fp-name" id="photo-name">—</div>
-              <div class="fp-meta" id="photo-meta">—</div>
-            </div>
-            <button type="button" class="fp-remove" id="photo-remove">✕</button>
-          </div>
-        </div>
-
-        <!-- Funnel Pitch — required only in PDF mode -->
-        <div class="field pdf-only" style="margin-bottom:0;">
-          <div class="label">
-            <span class="label-text">Funnel Pitch</span>
-            <span class="label-required">required for funnel in PDF mode · 1-3 sentences</span>
-          </div>
-          <textarea name="funnelPitch" id="funnelPitch" placeholder="A short pitch for the AI funnel copywriter. The funnel needs a description-like seed, separate from the PDF. Describe the course's transformation in 1-3 sentences — what does it deliver, who's it for, why does it matter?" style="min-height:80px;"></textarea>
-        </div>
-        <div class="desc-only" style="font-size:12px;color:var(--text-dim);line-height:1.5;">
-          ℹ︎ The Course Description above doubles as the funnel pitch (the seed for the AI funnel copywriter).
-        </div>
-      </div>
-
-      <div style="margin:8px 0 18px;padding:12px 14px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;font-size:13px;color:#3730a3;line-height:1.5;">
-        ⏱️ <strong>Total time:</strong> a full generation with all toggles enabled runs <strong>~10-15 minutes</strong>.
-        Toggle off what you don't need — each option above is independent.
-      </div>
-
-      <div class="submit-row">
-        <button type="submit" class="submit" id="submit-btn">
-          <span class="btn-label">Generate Outline</span>
-          <span class="arrow">→</span>
-        </button>
-      </div>
-
-      <div class="error" id="error"></div>
     </form>
   </div>
 
+<script>Studio.mountTopbar({ active: 'course', step: 1 });</script>
 <script>
 // ============ Mode toggle ============
 const modeButtons = document.querySelectorAll('.mode-btn');
@@ -780,7 +344,7 @@ function setAccent(hex) {
   accentHexInput.value = hex.toUpperCase();
 }
 
-// Theme swatches — close the custom-hex row if it was open
+// Theme swatches - close the custom-hex row if it was open
 swatches.forEach(s => {
   if (s.id === 'swatchCustom') return;
   s.addEventListener('click', () => {
@@ -790,7 +354,7 @@ swatches.forEach(s => {
   });
 });
 
-// Custom swatch — open the hex row, mark itself selected
+// Custom swatch - open the hex row, mark itself selected
 swatchCustom.addEventListener('click', () => {
   selectSwatch(swatchCustom);
   customHexRow.style.display = 'flex';
@@ -863,26 +427,26 @@ form.addEventListener('submit', async (e) => {
 
   // Lightweight validation
   const locationId = locationInput.value.trim();
-  if (!locationId) return showError('Please enter the Sub-Account Location ID');
-  if (!LOCATION_ID_RE.test(locationId)) return showError('Sub-Account Location ID looks malformed (expected ~20 alphanumeric characters)');
+  if (!locationId) return showError('Enter the sub-account ID.');
+  if (!LOCATION_ID_RE.test(locationId)) return showError('The sub-account ID should be about 20 letters and numbers.');
 
   const courseTitle = document.getElementById('courseTitle').value.trim();
-  if (!courseTitle) return showError('Please enter a course title');
-  if (mode === 'pdf' && !fileInput.files.length) return showError('Please upload a PDF');
+  if (!courseTitle) return showError('Enter a course title.');
+  if (mode === 'pdf' && !fileInput.files.length) return showError('Upload a PDF.');
   if (mode === 'description') {
     const desc = document.getElementById('description').value.trim();
-    if (desc.length < 20) return showError('Please provide a course description (at least 20 characters)');
+    if (desc.length < 20) return showError('Describe the course in at least 20 characters.');
   }
 
   // Funnel validation (only if toggle is on)
   const funnelOn = funnelToggle.checked;
   if (funnelOn) {
-    if (!document.getElementById('instructorName').value.trim()) return showError('Funnel: instructor first name is required');
-    if (!photoInput.files.length) return showError('Funnel: instructor photo upload is required');
-    if (!document.getElementById('coursePrice').value.trim()) return showError('Funnel: course price is required');
+    if (!document.getElementById('instructorName').value.trim()) return showError('Funnel: add the instructor first name.');
+    if (!photoInput.files.length) return showError('Funnel: upload an instructor photo.');
+    if (!document.getElementById('coursePrice').value.trim()) return showError('Funnel: add the course price.');
     if (mode === 'pdf') {
       const pitch = document.getElementById('funnelPitch').value.trim();
-      if (pitch.length < 20) return showError('Funnel: pitch must be at least 20 characters when course mode is PDF');
+      if (pitch.length < 20) return showError('Funnel: the pitch needs at least 20 characters.');
     }
   }
 
@@ -960,7 +524,7 @@ form.addEventListener('submit', async (e) => {
       GenProgress.markAllDone();
       setTimeout(() => { window.location.href = redirectUrl; }, 900);
     } else {
-      throw new Error('The connection to the server closed before generation finished (no draft was saved). Check the Render logs for the cause, then try again.');
+      throw new Error('The connection closed before generation finished, so nothing was saved. Check the server logs, then try again.');
     }
   } catch (err) {
     GenProgress.close();
@@ -974,20 +538,21 @@ function setLoading(loading) {
   const label = submitBtn.querySelector('.btn-label');
   const arrow = submitBtn.querySelector('.arrow');
   if (loading) {
-    label.textContent = funnelToggle.checked ? 'Generating course + funnel…' : 'Generating outline…';
-    arrow.innerHTML = '<span class="spinner"></span>';
+    label.textContent = funnelToggle.checked ? 'Generating course and funnel' : 'Generating outline';
+    arrow.innerHTML = Studio.icon('loader', 'spin');
   } else {
-    label.textContent = 'Generate Outline';
-    arrow.textContent = '→';
+    label.textContent = 'Generate outline';
+    arrow.innerHTML = Studio.icon('arrowRight');
   }
 }
 function showError(msg) {
-  errorBox.textContent = msg;
+  errorBox.innerHTML = Studio.icon('alert') + '<span></span>';
+  errorBox.querySelector('span').textContent = msg;
   errorBox.classList.add('visible');
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// GenProgress — vanilla-JS progress modal for /api/generate streaming.
+// GenProgress - vanilla-JS progress modal for /api/generate streaming.
 // Shows a checklist of active phases + a rotating cheeky message while the
 // 10-15 min generation runs. No React; built into the DOM on first open.
 // ═══════════════════════════════════════════════════════════════════════
@@ -995,28 +560,20 @@ const GenProgress = (function () {
   // Phases that may appear (conditional on form toggles). Keys match the
   // 'phase' values in server.js /api/generate's emit() calls.
   const PHASES = [
-    { key: 'outline',        label: 'Designing your course outline',     doneLabel: 'Outline ready' },
-    { key: 'workbooks',      label: 'Writing lesson workbooks',          doneLabel: 'Workbooks ready' },
-    { key: 'thumbnails',     label: 'Painting AI thumbnails',            doneLabel: 'Thumbnails ready' },
-    { key: 'funnel-content', label: 'Writing your sales funnel copy',    doneLabel: 'Funnel copy ready' },
-    { key: 'funnel-images',  label: 'Generating funnel images',          doneLabel: 'Funnel images ready' },
+    { key: 'outline',        label: 'Building the course outline', doneLabel: 'Outline ready' },
+    { key: 'workbooks',      label: 'Writing lesson workbooks',    doneLabel: 'Workbooks ready' },
+    { key: 'thumbnails',     label: 'Generating thumbnails',       doneLabel: 'Thumbnails ready' },
+    { key: 'funnel-content', label: 'Writing funnel copy',         doneLabel: 'Funnel copy ready' },
+    { key: 'funnel-images',  label: 'Generating funnel images',    doneLabel: 'Funnel images ready' },
   ];
-  // Cheeky rotating messages — rotated every 6s
+  // Cheeky rotating messages - rotated every 6s
   const MESSAGES = [
-    'Brewing your course… ☕',
-    'Teaching pixels to look professional…',
-    'Convincing the AI to be concise…',
-    'Sharpening every key takeaway…',
-    'Negotiating with the image model…',
-    'Counting commas. Eternally.',
-    'Making your funnel sound less like a robot…',
-    'Asking the cartoon characters to smile…',
-    'Quality-checking the puns. (Some made it through.)',
-    'Adding a sprinkle of conviction to the headlines…',
-    "Making sure no lesson rhymes with 'meh'…",
-    'Stress-testing every CTA button…',
-    'Bribing the thumbnails to look friendlier…',
-    'Almost there. Almost. There.',
+    'Reading your source material',
+    'Structuring modules and lessons',
+    'Drafting lesson content',
+    'Checking every section for consistency',
+    'Writing takeaways and action steps',
+    'Assembling the preview',
   ];
 
   let root, banner, phaseListEl, progressFillEl, msgEl, msgIdx = 0, msgTimer = null;
@@ -1027,15 +584,15 @@ const GenProgress = (function () {
   function build() {
     if (root) return;
     root = document.createElement('div');
-    root.className = 'gen-progress-backdrop';
+    root.className = 'modal-backdrop';
     root.innerHTML = `
-      <div class="gen-progress-modal">
-        <div class="gp-icon">✨</div>
-        <h2 class="gp-title">Cooking up your course…</h2>
-        <p class="gp-sub gp-message">Brewing your course… ☕</p>
-        <div class="gp-bar"><div class="gp-bar-fill" style="width:0%"></div></div>
-        <ul class="gp-phase-list"></ul>
-        <div class="gp-footnote">This usually runs <strong>3-10 minutes</strong> depending on your toggles. Keep this tab open — the page will redirect automatically.</div>
+      <div class="modal" role="dialog" aria-live="polite">
+        <div class="modal-icon">${Studio.icon('layers', 'lg')}</div>
+        <h2 class="modal-title gp-title">Generating your course</h2>
+        <p class="modal-sub gp-message"></p>
+        <div class="progress"><div class="progress-fill gp-bar-fill" style="width:0%"></div></div>
+        <ul class="phase-list gp-phase-list"></ul>
+        <div class="modal-foot">Usually 3 to 10 minutes depending on what you enabled. Keep this tab open. The preview opens automatically.</div>
       </div>
     `;
     document.body.appendChild(root);
@@ -1073,15 +630,15 @@ const GenProgress = (function () {
       const det = phaseDetail[p.key];
       let progressHint = '';
       if (st === 'active' && det?.total) {
-        progressHint = `<span class="gp-phase-meta">${det.done ?? 0} / ${det.total}</span>`;
+        progressHint = `<span class="phase-meta">${det.done ?? 0} / ${det.total}</span>`;
       } else if (st === 'done' && det?.total) {
-        progressHint = `<span class="gp-phase-meta">${det.total - (det.failed || 0)} / ${det.total}</span>`;
+        progressHint = `<span class="phase-meta">${det.total - (det.failed || 0)} / ${det.total}</span>`;
       }
-      const icon = st === 'done' ? '✓' : st === 'failed' ? '⚠' : st === 'active' ? '↻' : '·';
+      const icon = st === 'done' ? Studio.icon('check', 'sm') : st === 'failed' ? Studio.icon('x', 'sm') : st === 'active' ? Studio.icon('loader', 'sm spin') : '';
       const labelText = st === 'done' ? p.doneLabel : p.label;
-      return `<li class="gp-phase gp-phase-${st}">
-        <span class="gp-phase-icon">${icon}</span>
-        <span class="gp-phase-label">${labelText}</span>
+      return `<li class="phase phase-${st}">
+        <span class="phase-ic">${icon}</span>
+        <span>${labelText}</span>
         ${progressHint}
       </li>`;
     }).join('');
@@ -1120,8 +677,8 @@ const GenProgress = (function () {
     markAllDone() {
       for (const p of visiblePhases) if (phaseStatus[p.key] !== 'failed') phaseStatus[p.key] = 'done';
       renderList();
-      if (msgEl) msgEl.textContent = 'All done! Loading your preview…';
-      if (banner) banner.textContent = 'Your course is ready ✨';
+      if (msgEl) msgEl.textContent = 'Done. Opening the preview.';
+      if (banner) banner.textContent = 'Your course is ready';
     },
     close() {
       if (msgTimer) { clearInterval(msgTimer); msgTimer = null; }

@@ -3,371 +3,124 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Content Generation Studio — Funnel Only</title>
+<title>Funnel only | Content Generation Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/studio.css">
+<script src="/studio.js"></script>
 <style>
-  :root {
-    --bg: #fafaf7;
-    --surface: #ffffff;
-    --border: #e5e5e0;
-    --border-strong: #d4d4d0;
-    --text: #1a1a1a;
-    --text-dim: #525252;
-    --text-faint: #8a8a85;
-    --accent: #6366f1;
-    --accent-hover: #4f46e5;
-    --accent-soft: #eef2ff;
-    --danger: #dc2626;
-    --display: 'Fraunces', serif;
-    --sans: 'Inter', system-ui, sans-serif;
-    --mono: 'JetBrains Mono', monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    line-height: 1.5;
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-  }
-  body {
-    background-image:
-      radial-gradient(circle at 20% 0%, rgba(99, 102, 241, 0.06), transparent 40%),
-      radial-gradient(circle at 80% 100%, rgba(99, 102, 241, 0.04), transparent 40%);
-    background-attachment: fixed;
-  }
-  .page { max-width: 720px; margin: 0 auto; padding: 56px 32px 96px; }
-
-  /* Header */
-  .brand {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 56px;
-    font-family: var(--mono); font-size: 13px;
-    color: var(--text-dim);
-  }
-  .brand-dot {
-    width: 8px; height: 8px;
-    background: var(--accent);
-    border-radius: 50%;
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
-  }
-
-  .eyebrow {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    margin-bottom: 16px;
-  }
-  h1 {
-    font-family: var(--display);
-    font-weight: 400;
-    font-size: clamp(38px, 6vw, 56px);
-    line-height: 1.04;
-    letter-spacing: -0.02em;
-    margin-bottom: 20px;
-  }
-  h1 em { font-style: italic; color: var(--accent); }
-  .lede {
-    font-size: 17px; color: var(--text-dim);
-    max-width: 560px; line-height: 1.55;
-    margin-bottom: 48px;
-  }
-
-  /* Form */
-  .form {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 36px;
-  }
-  .field { margin-bottom: 24px; }
-  .field:last-of-type { margin-bottom: 0; }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .label {
-    display: flex; align-items: baseline; justify-content: space-between;
-    margin-bottom: 8px;
-  }
-  .label-text {
-    font-family: var(--mono); font-size: 11px;
-    text-transform: uppercase; letter-spacing: 0.08em;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .label-required { font-family: var(--mono); font-size: 10px; color: var(--accent); }
-  .label-hint { font-size: 12px; color: var(--text-faint); }
-
-  input[type="text"], input[type="number"], textarea, select {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border-strong);
-    border-radius: 6px;
-    padding: 12px 14px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 15px;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-  input:focus, textarea:focus, select:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
-  }
-  textarea { resize: vertical; min-height: 120px; font-family: var(--sans); }
-  ::placeholder { color: var(--text-faint); }
-
-  /* Dropzone */
-  .dropzone {
-    position: relative;
-    display: block;
-    width: 100%;
-    border: 1.5px dashed var(--border-strong);
-    border-radius: 6px;
-    padding: 28px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.15s;
-    background: var(--bg);
-    overflow: hidden;
-  }
-  .dropzone:hover, .dropzone.dragging { border-color: var(--accent); background: var(--accent-soft); }
-  .dropzone input[type="file"] {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    z-index: 1;
-  }
-  .dropzone .dz-primary,
-  .dropzone .dz-secondary {
-    position: relative;
-    z-index: 0;
-    pointer-events: none;
-  }
-  .dz-primary { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
-  .dz-primary span { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-  .dz-secondary { font-family: var(--mono); font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; }
-  .file-preview {
-    display: none; margin-top: 10px;
-    padding: 10px 14px;
-    background: var(--accent-soft);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    align-items: center; gap: 10px;
-    font-size: 14px;
-  }
-  .file-preview.visible { display: flex; }
-  .file-preview .fp-name { flex: 1; font-weight: 500; }
-  .file-preview .fp-meta { font-family: var(--mono); font-size: 11px; color: var(--text-faint); }
-  .file-preview .fp-remove { background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px; }
-
-  /* Toggle (mirrors workbook-toggle in main form) */
-  .workbook-toggle {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 16px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    background: #fafafa;
-  }
-  .workbook-toggle:hover { border-color: var(--accent); background: var(--accent-soft); }
-  .workbook-toggle input[type="checkbox"] { display: none; }
-  .toggle-track {
-    flex-shrink: 0;
-    width: 40px; height: 24px;
-    background: #cbd5e1;
-    border-radius: 12px;
-    position: relative;
-    transition: background 0.2s;
-    margin-top: 2px;
-  }
-  .toggle-thumb {
-    position: absolute;
-    top: 2px; left: 2px;
-    width: 20px; height: 20px;
-    background: white;
-    border-radius: 50%;
-    transition: transform 0.2s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  }
-  .workbook-toggle input:checked + .toggle-track { background: var(--accent); }
-  .workbook-toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(16px); }
-  .toggle-label { display: flex; flex-direction: column; gap: 4px; }
-  .toggle-title { font-weight: 600; font-size: 14px; color: var(--text); }
-  .toggle-desc { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
-
-  /* Submit */
-  .submit-row {
-    margin-top: 32px;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap;
-  }
-  .submit-meta {
-    font-family: var(--mono); font-size: 11px;
-    color: var(--text-faint);
-    text-transform: uppercase; letter-spacing: 0.06em;
-  }
-  button.submit {
-    background: var(--text);
-    color: var(--surface);
-    border: none;
-    padding: 14px 28px;
-    font-family: var(--sans);
-    font-size: 14px; font-weight: 600;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: inline-flex; align-items: center; gap: 10px;
-  }
-  button.submit:hover:not(:disabled) { background: #000; }
-  button.submit:disabled { opacity: 0.5; cursor: not-allowed; }
-  .arrow { transition: transform 0.15s; }
-  button.submit:hover:not(:disabled) .arrow { transform: translateX(3px); }
-
-  .spinner {
-    width: 14px; height: 14px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: var(--surface);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    display: inline-block;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .error {
-    background: #fef2f2; color: var(--danger);
-    padding: 12px 16px; border-radius: 6px;
-    border: 1px solid #fecaca;
-    font-size: 14px;
-    margin-top: 16px;
-    display: none;
-  }
-  .error.visible { display: block; }
-
-  @media (max-width: 540px) {
-    .page { padding: 36px 18px 64px; }
-    .form { padding: 24px 18px; }
-    .row { grid-template-columns: 1fr; }
-  }
+  .hero { margin: 28px 0; }
+  .submit-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .submit-note { font-size: 12.5px; color: var(--text-faint); display: flex; align-items: center; gap: 6px; }
 </style>
 </head>
 <body>
   <div class="page">
-    <div class="brand" style="display:flex; align-items:center;">
-      <span class="brand-dot"></span>
-      <span>Content Generation Studio · Funnel Only</span>
-      <a href="/" style="margin-left:auto; font-size:11px; color:var(--text-dim); text-decoration:none; font-family:var(--mono); text-transform:uppercase; letter-spacing:0.08em; padding:5px 12px; border:1px solid var(--border); border-radius:999px; transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent)';" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-dim)';">← Studio</a>
+    <div class="hero">
+      <div class="eyebrow">Funnel only</div>
+      <h1 class="h1">Build a <em>sales funnel</em> for any course.</h1>
+      <p class="lede" style="margin-bottom:0">A three step funnel with written copy and imagery: sales page, checkout, and confirmation. Review it, then publish to your sub-account.</p>
     </div>
 
-    <div class="eyebrow">Step 01 — Generate</div>
-    <h1>Build an <em>AI funnel</em><br/>for any <em>course</em>.</h1>
-    <p class="lede">
-      Generate a complete 3-step sales funnel — sales page, checkout, and confirmation —
-      with AI-written copy and module imagery. Push it straight to your CC360 sub-account's
-      custom values when you're happy.
-    </p>
-
-    <form id="funnel-form" class="form">
-      <div class="field">
-        <div class="label">
-          <span class="label-text">Sub-Account Location ID</span>
-          <span class="label-required">required</span>
-        </div>
-        <input type="text" id="locationId" placeholder="e.g. abc123def456ghi789jkl" />
-      </div>
-
-      <div class="field">
-        <div class="label">
-          <span class="label-text">Course Title</span>
-          <span class="label-required">required</span>
-        </div>
-        <input type="text" id="courseTitle" placeholder="e.g. The 90-Day Confidence Reset" />
-      </div>
-
-      <div class="field">
-        <div class="label">
-          <span class="label-text">Course Pitch</span>
-          <span class="label-required">required · 1-3 sentences</span>
-        </div>
-        <textarea id="coursePitch" placeholder="Describe the transformation in 1-3 sentences. What does the course deliver? Who is it for? Why does it matter? This is what the funnel AI uses to write all of the copy — make it punchy and specific."></textarea>
-      </div>
-
-      <div class="row">
+    <form id="funnel-form" class="card">
+      <div class="section">
         <div class="field">
           <div class="label">
-            <span class="label-text">Instructor First Name</span>
-            <span class="label-required">required</span>
+            <span class="label-text">Sub-account ID</span>
+            <span class="label-required">Required</span>
           </div>
-          <input type="text" id="instructorName" placeholder="e.g. Jane" />
+          <input type="text" id="locationId" class="mono" placeholder="ITeSh9QmCqRSsZwtBCZX" autocomplete="off" spellcheck="false" />
         </div>
+
         <div class="field">
           <div class="label">
-            <span class="label-text">Course Price</span>
-            <span class="label-required">required</span>
+            <span class="label-text">Course title</span>
+            <span class="label-required">Required</span>
           </div>
-          <input type="text" id="coursePrice" value="$497 one time" placeholder="e.g. $997 one time" />
+          <input type="text" id="courseTitle" placeholder="The 90-Day Confidence Reset" />
         </div>
-      </div>
 
-      <div class="field">
-        <div class="label">
-          <span class="label-text">Instructor Photo</span>
-          <span class="label-required">required · max 8 MB · JPG/PNG</span>
-        </div>
-        <label class="dropzone" id="photo-dropzone">
-          <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" />
-          <div class="dz-primary">Drop a photo or <span>browse</span></div>
-          <div class="dz-secondary">Headshot recommended — used in "Meet [name]"</div>
-        </label>
-        <div class="file-preview" id="photo-preview">
-          <span style="font-size:18px;">📷</span>
-          <div style="flex:1; min-width:0;">
-            <div class="fp-name" id="photo-name">—</div>
-            <div class="fp-meta" id="photo-meta">—</div>
+        <div class="field">
+          <div class="label">
+            <span class="label-text">Pitch</span>
+            <span class="label-required">Required</span>
           </div>
-          <button type="button" class="fp-remove" id="photo-remove">✕</button>
+          <textarea id="coursePitch" placeholder="One to three sentences: what the course delivers, who it is for, and why it matters. This is what the copy is written from."></textarea>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <div class="label">
+              <span class="label-text">Instructor first name</span>
+              <span class="label-required">Required</span>
+            </div>
+            <input type="text" id="instructorName" placeholder="Jane" />
+          </div>
+          <div class="field">
+            <div class="label">
+              <span class="label-text">Price</span>
+              <span class="label-required">Required</span>
+            </div>
+            <input type="text" id="coursePrice" value="$497 one time" placeholder="$997 one time" />
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label">
+            <span class="label-text">Instructor photo</span>
+            <span class="label-hint">JPG or PNG, up to 8 MB</span>
+          </div>
+          <label class="dropzone" id="photo-dropzone" style="padding:20px 16px;">
+            <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" />
+            <div class="dz-icon"><i data-icon="camera" class="lg"></i></div>
+            <div class="dz-primary">Drop a photo or <span>browse</span></div>
+            <div class="dz-secondary">A headshot works best</div>
+          </label>
+          <div class="file-chip" id="photo-preview">
+            <i data-icon="image" class="lg"></i>
+            <div style="flex:1;min-width:0;">
+              <div class="fc-name" id="photo-name"></div>
+              <div class="fc-meta" id="photo-meta"></div>
+            </div>
+            <button type="button" class="fc-remove" id="photo-remove" aria-label="Remove photo"><i data-icon="x"></i></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label">
+            <span class="label-text">Instructions</span>
+            <span class="label-hint">Optional</span>
+          </div>
+          <textarea id="instructions" placeholder="Tone, vocabulary, or audience notes. Example: warm but direct, audience is first-time founders." style="min-height:80px;"></textarea>
+        </div>
+
+        <div class="field">
+          <label class="switch" for="skipImages">
+            <input type="checkbox" id="skipImages" />
+            <span class="switch-track"></span>
+            <span>
+              <span class="switch-title">Skip images</span>
+              <span class="switch-desc">Generates and publishes the funnel without module thumbnails or the laptop mockup. Required when image generation is off on the server.</span>
+            </span>
+          </label>
         </div>
       </div>
 
-      <div class="field">
-        <div class="label">
-          <span class="label-text">AI Instructions</span>
-          <span class="label-hint">optional · tone, vocabulary, audience notes</span>
+      <div class="section">
+        <div class="submit-row">
+          <span class="submit-note"><i data-icon="clock" class="sm"></i> About 2 to 3 minutes</span>
+          <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+            <span class="btn-label">Generate funnel</span>
+            <span class="arrow"><i data-icon="arrowRight"></i></span>
+          </button>
         </div>
-        <textarea id="instructions" placeholder="Optional. Examples: 'Use second-person voice', 'Audience are first-time founders aged 25-40', 'Avoid jargon', 'Tone should be warm but no-fluff'." style="min-height:80px;"></textarea>
-      </div>
-
-      <div class="field">
-        <label class="workbook-toggle" for="skipImages">
-          <input type="checkbox" id="skipImages" />
-          <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          <span class="toggle-label">
-            <span class="toggle-title">Skip image generation</span>
-            <span class="toggle-desc">Saves Gemini image credits (and is required on the free tier). The funnel will be generated and pushed without module thumbnails or the laptop mockup. Useful when first verifying that custom values map correctly to your master funnel template.</span>
-          </span>
-        </label>
-      </div>
-
-      <div class="error" id="error"></div>
-
-      <div class="submit-row">
-        <div class="submit-meta">⚡ ~2-3 min to generate</div>
-        <button type="submit" class="submit" id="submit-btn">
-          <span class="btn-label">Generate AI Funnel</span>
-          <span class="arrow">→</span>
-        </button>
+        <div class="notice notice-danger error" id="error"></div>
       </div>
     </form>
   </div>
 
+<script>Studio.mountTopbar({ active: "funnel", step: 1 });</script>
 <script>
 const LOCATION_KEY = 'cc360.lastLocationId';
 const LOCATION_ID_RE = /^[A-Za-z0-9]{15,30}$/;
@@ -413,22 +166,22 @@ form.addEventListener('submit', async (e) => {
   errorBox.classList.remove('visible');
 
   const locationId = locationInput.value.trim();
-  if (!locationId) return showError('Please enter the Sub-Account Location ID');
-  if (!LOCATION_ID_RE.test(locationId)) return showError('Location ID looks malformed (expected ~20 alphanumeric characters)');
+  if (!locationId) return showError('Enter the sub-account ID.');
+  if (!LOCATION_ID_RE.test(locationId)) return showError('The sub-account ID should be about 20 letters and numbers.');
 
   const courseTitle = document.getElementById('courseTitle').value.trim();
-  if (!courseTitle) return showError('Please enter a course title');
+  if (!courseTitle) return showError('Enter a course title.');
 
   const coursePitch = document.getElementById('coursePitch').value.trim();
-  if (coursePitch.length < 20) return showError('Course pitch must be at least 20 characters');
+  if (coursePitch.length < 20) return showError('The pitch needs at least 20 characters.');
 
   const instructorName = document.getElementById('instructorName').value.trim();
-  if (!instructorName) return showError('Instructor first name is required');
+  if (!instructorName) return showError('Add the instructor first name.');
 
   const coursePrice = document.getElementById('coursePrice').value.trim();
-  if (!coursePrice) return showError('Course price is required');
+  if (!coursePrice) return showError('Add the course price.');
 
-  if (!photoInput.files.length) return showError('Instructor photo is required');
+  if (!photoInput.files.length) return showError('Upload an instructor photo.');
 
   try { localStorage.setItem(LOCATION_KEY, locationId); } catch (_) {}
   setLoading(true);
@@ -459,16 +212,17 @@ function setLoading(loading) {
   const label = submitBtn.querySelector('.btn-label');
   const arrow = submitBtn.querySelector('.arrow');
   if (loading) {
-    label.textContent = document.getElementById('skipImages').checked ? 'Generating funnel (text only)…' : 'Generating funnel…';
-    arrow.innerHTML = '<span class="spinner"></span>';
+    label.textContent = document.getElementById('skipImages').checked ? 'Generating funnel (text only)' : 'Generating funnel';
+    arrow.innerHTML = Studio.icon('loader', 'spin');
   } else {
-    label.textContent = 'Generate AI Funnel';
-    arrow.innerHTML = '→';
+    label.textContent = 'Generate funnel';
+    arrow.innerHTML = Studio.icon('arrowRight');
   }
 }
 
 function showError(msg) {
-  errorBox.textContent = msg;
+  errorBox.innerHTML = Studio.icon('alert') + '<span></span>';
+  errorBox.querySelector('span').textContent = msg;
   errorBox.classList.add('visible');
   errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }

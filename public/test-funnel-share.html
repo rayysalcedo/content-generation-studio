@@ -3,15 +3,10 @@
 <head>
 <meta charset="utf-8">
 <title>Content Generation Studio · Funnel Share Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/studio.css">
+<script src="/studio.js"></script>
 <style>
-  :root {
-    --bg: #f6f6f0; --surface: #fff; --border: #e5e5e0; --border-strong: #d4d4d0;
-    --text: #0a0a0a; --text-dim: #4a4a4a; --text-faint: #7a7a7a;
-    --accent: #6366f1; --accent-soft: rgba(99,102,241,0.08);
-    --ok: #10b981; --ok-soft: #ecfdf5; --bad: #dc2626; --bad-soft: #fef2f2;
-    --warn: #b45309; --warn-soft: #fffbeb;
-    --mono: 'SF Mono', Menlo, Consolas, monospace;
-  }
   * { box-sizing: border-box; }
   body {
     margin: 0; padding: 40px 24px;
@@ -113,12 +108,12 @@
 </head>
 <body>
 <div class="wrap">
-  <a href="/setup" class="back">← Back to Setup</a>
+  <a href="/setup" class="back">Back to Setup</a>
   <header>
     <h1>Funnel Share Test</h1>
     <p class="sub">
-      Clone a themed funnel into a sub-account via GHL's <code>clone-funnel-to-locations</code> endpoint —
-      the same path the "Share Funnel → Import" UI uses. Produces a bit-perfect copy (no missing elements
+      Clone a themed funnel into a sub-account via GHL's <code>clone-funnel-to-locations</code> endpoint -
+      the same path the "Share Funnel  Import" UI uses. Produces a bit-perfect copy (no missing elements
       like the old snapshot path).
       <strong>Zero AI cost</strong>. Iterate freely.
     </p>
@@ -142,10 +137,10 @@
       </div>
     </div>
     <div class="field">
-      <label for="funnelIdOverride">Funnel ID override <span style="font-weight:400;text-transform:none;color:var(--text-faint);letter-spacing:0;">(optional — leave blank to use the theme's mapped funnelId)</span></label>
+      <label for="funnelIdOverride">Funnel ID override <span style="font-weight:400;text-transform:none;color:var(--text-faint);letter-spacing:0;">(optional - leave blank to use the theme's mapped funnelId)</span></label>
       <input id="funnelIdOverride" class="mono" placeholder="e.g. nMLWK4PcpmWVvRPs8Zvj" autocomplete="off" />
     </div>
-    <p class="help">A new funnel will be created in this sub-account named <code>Content Generation Studio Funnel (&lt;Theme&gt;-Theme)</code>. Re-running creates additional copies — GHL does not de-dupe by name on share-clone.</p>
+    <p class="help">A new funnel will be created in this sub-account named <code>Content Generation Studio Funnel (&lt;Theme&gt;-Theme)</code>. Re-running creates additional copies - GHL does not de-dupe by name on share-clone.</p>
     <button id="testBtn" class="primary">Clone Funnel to Sub-Account</button>
   </div>
 
@@ -191,7 +186,7 @@ testBtn.addEventListener('click', async () => {
   try { localStorage.setItem(LS_KEY, locationId); } catch (_) {}
 
   testBtn.disabled = true;
-  testBtn.textContent = 'Cloning funnel…';
+  testBtn.textContent = 'Cloning funnel';
   resultBox.classList.remove('visible');
 
   try {
@@ -213,8 +208,8 @@ testBtn.addEventListener('click', async () => {
 function renderResult(ok, data) {
   banner.className = 'result-banner ' + (ok ? 'ok' : 'bad');
   banner.textContent = ok
-    ? `✓ Funnel cloned successfully in ${data.elapsedMs} ms`
-    : `✕ ${data.error || 'Failed'}`;
+    ? `OK Funnel cloned successfully in ${data.elapsedMs} ms`
+    : `x ${data.error || 'Failed'}`;
 
   const items = [];
   if (data.theme)      items.push(['Theme', data.theme]);
@@ -237,7 +232,7 @@ function renderResult(ok, data) {
     if (j.targetInTokenLocations != null) {
       const locBadge = j.targetInTokenLocations
         ? '<span class="jwt-badge ok">YES</span>'
-        : '<span class="jwt-badge bad">NO — token-id locations don\'t include target. May 403.</span>';
+        : '<span class="jwt-badge bad">NO - token-id locations don\'t include target. May 403.</span>';
       items.push(['Target in JWT locations', locBadge + ' <span style="color:var(--text-faint)">(' + (j.tokenLocationCount ?? '?') + ' locations in token)</span>']);
     }
   }

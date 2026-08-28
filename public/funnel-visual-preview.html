@@ -3,20 +3,23 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Content Generation Studio — Funnel Visual Preview</title>
+<title>Funnel preview | Content Generation Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="/vendor/react.js"></script>
+<script src="/vendor/react-dom.js"></script>
+<script src="/vendor/babel.js"></script>
+<link rel="stylesheet" href="/studio-tokens.css">
+<script src="/studio.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #f5f5f0;
-    color: #0f172a;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
     overflow-x: hidden;
   }
   textarea, input { font-family: inherit; }
@@ -27,12 +30,16 @@
      ═══════════════════════════════════════════════════ */
   .app-header {
     position: sticky; top: 0; z-index: 100;
-    height: 64px;
-    background: #ffffff;
-    border-bottom: 1px solid #e5e5e0;
+    height: 60px;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
     display: flex; align-items: center;
-    padding: 0 24px; gap: 24px;
+    padding: 0 16px; gap: 14px;
   }
+  @media (max-width: 1360px) { .theme-picker-label { display: none; } }
+  @media (max-width: 1200px) { .standalone-badge { display: none; } }
   /* Slim header when this page is rendered inside the main preview's iframe.
      Removes the parts the parent already owns (back-nav, brand, push button). */
   .embedded-mode .app-header.embedded {
@@ -43,18 +50,17 @@
   .embedded-mode body, body.embedded-mode { background: transparent; }
   .app-brand {
     display: flex; align-items: center; gap: 10px;
-    font-weight: 600; font-size: 15px;
+    font-family: var(--display); font-weight: 600; font-size: 14.5px;
+    white-space: nowrap;
   }
-  .app-brand-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: var(--t-primary);
-    transition: background 200ms ease;
-  }
+  .standalone-badge { white-space: nowrap; }
+  @media (max-width: 1100px) { .app-brand > span:nth-child(2) { display: none; } }
+  .app-brand-dot { display: none; }
 
   .theme-picker { display: flex; align-items: center; gap: 8px; }
   .theme-picker-label {
     font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
-    color: #6b7280; font-weight: 600; margin-right: 6px;
+    color: var(--text-faint); font-weight: 700; margin-right: 6px;
   }
   .theme-swatch {
     width: 32px; height: 32px; border-radius: 8px;
@@ -65,12 +71,12 @@
   .theme-swatch:hover { transform: translateY(-1px); }
   .theme-swatch.active::after {
     content: ''; position: absolute; inset: -5px;
-    border: 2px solid #0f172a; border-radius: 12px;
+    border: 2px solid var(--text); border-radius: 12px;
   }
   .theme-swatch-tooltip {
     position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
     padding: 4px 8px;
-    background: #0f172a; color: white;
+    background: var(--text); color: var(--bg);
     font-size: 11px; border-radius: 4px;
     white-space: nowrap; opacity: 0; pointer-events: none;
     transition: opacity 180ms ease; z-index: 10;
@@ -78,33 +84,38 @@
   .theme-swatch:hover .theme-swatch-tooltip { opacity: 1; }
 
   .header-spacer { flex: 1; }
+  .hero-email .ic { width: 24px; height: 24px; }
+  .hero-video-play .ic { width: 56px; height: 56px; fill: white; stroke: white; filter: drop-shadow(0 4px 12px rgba(0,0,0,.4)); }
+  .push-x-icon .ic { width: 24px; height: 24px; stroke-width: 2.5; }
+  .ic { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ic-sun { display: none; } [data-theme="dark"] .ic-sun { display: block; } [data-theme="dark"] .ic-moon { display: none; }
 
   /* Back to Studio link — sits at the very left of the header */
   .back-to-studio {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 7px 11px 7px 8px;
     border-radius: 8px;
-    color: #475569;
-    font-size: 13px; font-weight: 500;
+    color: var(--text-dim);
+    font-size: 13px; font-weight: 600;
     text-decoration: none;
     border: 1px solid transparent;
     transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
   }
   .back-to-studio:hover {
-    background: #f1f5f9;
-    border-color: #e2e8f0;
-    color: #0f172a;
+    background: var(--surface-2);
+    border-color: var(--border);
+    color: var(--text);
   }
   .back-to-studio svg { flex-shrink: 0; }
   .header-divider {
-    width: 1px; height: 26px; background: #e5e7eb;
+    width: 1px; height: 26px; background: var(--border);
     margin: 0 4px;
   }
 
   /* Segmented pill control for Sales / Checkout / Confirmation */
   .step-tabs {
     display: inline-flex;
-    background: #f1f5f9;
+    background: var(--surface-2); border: 1px solid var(--border);
     border-radius: 9px;
     padding: 3px;
     gap: 2px;
@@ -112,23 +123,23 @@
   .step-tab {
     background: none; border: none; cursor: pointer;
     padding: 7px 14px;
-    font-size: 13px; font-weight: 500;
-    color: #64748b;
+    font-size: 13px; font-weight: 600;
+    color: var(--text-dim);
     border-radius: 7px;
     transition: color 150ms ease, background 150ms ease, box-shadow 150ms ease;
     white-space: nowrap;
   }
-  .step-tab:hover { color: #0f172a; }
+  .step-tab:hover { color: var(--text); }
   .step-tab.active {
-    background: white;
-    color: #0f172a;
-    box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1px rgba(15,23,42,0.04);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
   }
 
   .header-btn {
-    border: 1px solid #d4d4d0; background: white;
-    border-radius: 6px; padding: 8px 16px;
-    font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
+    border-radius: 9px; padding: 9px 16px;
+    font-size: 13px; font-weight: 600;
     display: inline-flex; align-items: center; gap: 6px;
     transition: all 150ms ease;
   }
@@ -1052,7 +1063,7 @@ const MOCK = {
   price:       '$497 one time',
   // Hero
   hero_eyebrow:    'MASTER AI SKILLS FROM ZERO TO EXPERT FAST',
-  hero_headline:   'Become an AI Expert from Scratch — Transform Your Career and Skills Today',
+  hero_headline:   'Become an AI Expert from Scratch and Transform Your Career',
   hero_subheadline:'A practical, beginner-friendly course that takes you from "what is AI?" to confidently building real models.',
   hero_cta:        'Get instant access here!',
   hero_star_text:  'Thousands of learners worldwide trust this course',
@@ -1094,17 +1105,17 @@ const MOCK = {
   modules_eyebrow:  'MODULES',
   modules_headline: 'FOLLOW MY STEP BY STEP VIDEO TRAINING',
   modules: [
-    { title: 'Week 1 — Introduction to AI Concepts',        desc: 'Learn what AI is, its history, and key terms to build a strong foundation.' },
-    { title: 'Week 2 — Machine Learning Basics',            desc: 'Explore supervised and unsupervised learning techniques with simple examples.' },
-    { title: 'Week 3 — Deep Learning Fundamentals',         desc: 'Understand neural networks and how deep learning powers modern AI.' },
-    { title: 'Week 4 — Practical AI Tools',                 desc: 'Get hands-on with Python libraries and frameworks like TensorFlow and scikit-learn.' },
-    { title: 'Week 5 — Real-World AI Projects',             desc: 'Apply your skills by building projects such as image recognition and chatbots.' },
-    { title: 'Bonus — AI Ethics and Future Trends',         desc: 'Learn about ethical considerations and where AI is heading next.' },
-    { title: 'Bonus — Career Strategies for AI Roles',      desc: 'Discover how to position yourself for AI jobs and prepare for interviews.' },
-    { title: 'Bonus — Resources and Continued Learning',    desc: 'Access curated resources to keep advancing your AI expertise after the course.' },
+    { title: 'Week 1: Introduction to AI Concepts',        desc: 'Learn what AI is, its history, and key terms to build a strong foundation.' },
+    { title: 'Week 2: Machine Learning Basics',            desc: 'Explore supervised and unsupervised learning techniques with simple examples.' },
+    { title: 'Week 3: Deep Learning Fundamentals',         desc: 'Understand neural networks and how deep learning powers modern AI.' },
+    { title: 'Week 4: Practical AI Tools',                 desc: 'Get hands-on with Python libraries and frameworks like TensorFlow and scikit-learn.' },
+    { title: 'Week 5: Real-World AI Projects',             desc: 'Apply your skills by building projects such as image recognition and chatbots.' },
+    { title: 'Bonus: AI Ethics and Future Trends',         desc: 'Learn about ethical considerations and where AI is heading next.' },
+    { title: 'Bonus: Career Strategies for AI Roles',      desc: 'Discover how to position yourself for AI jobs and prepare for interviews.' },
+    { title: 'Bonus: Resources and Continued Learning',    desc: 'Access curated resources to keep advancing your AI expertise after the course.' },
   ],
   // Pricing
-  pricing_title:    'Being an AI Expert from Scratch — Your Path to AI Mastery',
+  pricing_title:    'Being an AI Expert from Scratch: Your Path to AI Mastery',
   pricing_desc:     'Invest in your future by gaining the skills needed to become a confident AI professional. This course guides you from beginner to capable practitioner.',
   pricing_benefits: [
     'Lifetime access to comprehensive AI training content and updates.',
@@ -1391,7 +1402,7 @@ function App() {
 
   async function pushToCC360() {
     if (!draftId) {
-      showToast('Standalone preview — connect to a draft to push.', true);
+      showToast('Sample preview. Open a draft to publish.', true);
       return;
     }
     // Smart-route: if this draft has a course, hit the full push endpoint
@@ -1493,9 +1504,9 @@ function App() {
           <div className="header-divider"></div>
 
           <div className="app-brand">
-            <span className="app-brand-dot"></span>
+            <span className="brand-mark" style={{ width: 24, height: 24, borderRadius: 7, background: 'var(--accent)', display: 'inline-block' }}></span>
             <span>Content Generation Studio</span>
-            {!draftId && <span className="standalone-badge">Standalone Preview</span>}
+            {!draftId && <span className="standalone-badge">Sample preview</span>}
           </div>
 
           <div className="theme-picker">
@@ -1532,14 +1543,17 @@ function App() {
           </div>
 
           <button className="header-btn primary" onClick={pushToCC360} disabled={pushing}>
-            {pushing ? 'Pushing…' : 'Push to CC360'}
+            {pushing ? 'Publishing' : 'Publish funnel'}
+          </button>
+          <button className="header-btn" type="button" title="Switch theme" aria-label="Switch theme" onClick={() => Studio.toggleTheme()} style={{ padding: '8px 10px' }}>
+            <span dangerouslySetInnerHTML={{ __html: Studio.icon('sun', 'ic-sun') + Studio.icon('moon', 'ic-moon') }} style={{ display: 'inline-flex' }} />
           </button>
         </header>
       )}
 
       {loading && (
         <div className="loading-overlay">
-          <div>Loading draft…</div>
+          <div>Loading draft</div>
         </div>
       )}
 
@@ -1623,7 +1637,7 @@ function PushOverlay({ events, done, theme, locationId, onClose }) {
   const latestEv = [...events].reverse().find(e => e.phase === currentPhase.key);
   let subtext = '';
   if (currentPhase.key === 'theme-snapshot' && latestEv?.status === 'propagating') {
-    subtext = 'Waiting for CC360 to set up your funnel pages…';
+    subtext = 'Waiting for the funnel pages to be created';
   } else if (currentPhase.key === 'funnel-images' && latestEv?.total) {
     subtext = `${latestEv.total} images`;
   } else if (currentPhase.key === 'funnel-customvalues' && latestEv?.total) {
@@ -1646,7 +1660,7 @@ function PushOverlay({ events, done, theme, locationId, onClose }) {
                          'Pushing to CC360'}
           </strong>
           {(done || isError) && (
-            <button className="push-close-btn" onClick={onClose} aria-label="Close">✕</button>
+            <button className="push-close-btn" onClick={onClose} aria-label="Close"><span dangerouslySetInnerHTML={{ __html: Studio.icon("x") }} style={{ display: "inline-flex" }} /></button>
           )}
         </div>
 
@@ -1660,7 +1674,7 @@ function PushOverlay({ events, done, theme, locationId, onClose }) {
         <div className="push-body">
           {isError ? (
             <div className="push-error-state">
-              <div className="push-x-icon">✕</div>
+              <div className="push-x-icon"><span dangerouslySetInnerHTML={{ __html: Studio.icon("x", "lg") }} style={{ display: "inline-flex" }} /></div>
               <div className="push-error-msg">{errorEvent.error || 'Something went wrong.'}</div>
               <button className="push-cta-link" onClick={onClose} style={{ background: '#dc2626' }}>
                 Close
@@ -1686,12 +1700,12 @@ function PushOverlay({ events, done, theme, locationId, onClose }) {
               <div className="push-locate-hint">
                 <span className="push-locate-hint-label">FIND IT IN CC360</span>
                 <span className="push-locate-hint-text">
-                  Sites → Funnels → look for <strong>"CC360 AI Funnel Template ({theme.name}-Theme)"</strong>
+                  Sites, then Funnels. Look for <strong>"Content Generation Studio Funnel ({theme.name}-Theme)"</strong>
                 </span>
               </div>
               {cc360Url ? (
                 <a href={cc360Url} target="_blank" rel="noreferrer" className="push-cta-link">
-                  Open Funnels in CC360 →
+                  Open funnels
                 </a>
               ) : (
                 <button className="push-cta-link" onClick={onClose}>Close</button>
@@ -1702,7 +1716,7 @@ function PushOverlay({ events, done, theme, locationId, onClose }) {
             </div>
           ) : (
             <>
-              <h3 className="push-current-title">{currentPhase.label}…</h3>
+              <h3 className="push-current-title">{currentPhase.label}</h3>
               <p className="push-current-sub">{subtext}</p>
               <ul className="push-step-list">
                 {PUSH_PHASES.map(p => {
@@ -1715,7 +1729,7 @@ function PushOverlay({ events, done, theme, locationId, onClose }) {
                     <li key={p.key}
                         className={`push-step ${isActive ? 'active' : ''} ${isDone ? 'done' : ''} ${isFailed ? 'failed' : ''}`}>
                       <span className="push-step-icon">
-                        {isDone   ? '✓' :
+                        {isDone   ? <span dangerouslySetInnerHTML={{ __html: Studio.icon('check', 'sm') }} style={{ display: 'inline-flex' }} /> :
                          isFailed ? '!' :
                          isActive ? <span className="push-spinner"/> :
                                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }}/>}
@@ -1744,7 +1758,7 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq, draftId, imageKeys
       {/* HERO */}
       <section className="section">
         <BgSvg light lineColor={theme.lineLight}/>
-        <div className="hero-email">✉</div>
+        <div className="hero-email"><span dangerouslySetInnerHTML={{ __html: Studio.icon("mail") }} style={{ display: "inline-flex" }} /></div>
         <div className="section-inner">
           <div className="hero-grid">
             <div>
@@ -1775,10 +1789,10 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq, draftId, imageKeys
               </div>
             </div>
             <div>
-              <div className="hero-video-caption">🔊 CLICK BELOW TO WATCH FIRST!</div>
+              <div className="hero-video-caption">CLICK BELOW TO WATCH FIRST</div>
               <div className="hero-video">
                 <img src={STATIC.videoThumb} alt="" className="hero-video-img"/>
-                <div className="hero-video-play">▶</div>
+                <div className="hero-video-play"><span dangerouslySetInnerHTML={{ __html: Studio.icon("play") }} style={{ display: "inline-flex" }} /></div>
               </div>
             </div>
           </div>
@@ -1861,7 +1875,7 @@ function SalesPage({ c, setField, theme, openFaq, setOpenFaq, draftId, imageKeys
         <BgSvg lineColor={theme.lineDark}/>
         <div className="section-inner">
           <div className="eyebrow center" style={{color: theme.primary}}>TESTIMONIALS</div>
-          <h2 className="h2-display">What our students are saying…</h2>
+          <h2 className="h2-display">What our students are saying</h2>
           <div className="testimonials-grid">
             {c.testimonials.map((t,i) => (
               <div key={i} className="testimonial-card">
@@ -2127,7 +2141,7 @@ function CheckoutPage({ c, setField, theme, openFaq, setOpenFaq, draftId, imageK
                 <button>Apply</button>
               </div>
               <div className="checkout-section-h">Payment method</div>
-              <div className="checkout-line"><span>(payment provider — preview)</span></div>
+              <div className="checkout-line"><span>(payment provider preview)</span></div>
               <div className="checkout-secure">★ 100% Secure & Safe Payments ★</div>
             </div>
 

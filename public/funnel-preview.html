@@ -3,34 +3,17 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Content Generation Studio — Funnel Preview</title>
+<title>Funnel review | Content Generation Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/studio.css">
+<script src="/studio.js"></script>
+<script src="/vendor/react.js"></script>
+<script src="/vendor/react-dom.js"></script>
+<script src="/vendor/babel.js"></script>
 <style>
-  :root {
-    --accent: #6366f1;
-    --accent-soft: rgba(99, 102, 241, 0.08);
-    --bg: #fafaf7;
-    --surface: #ffffff;
-    --surface-2: #f4f4f5;
-    --text: #18181b;
-    --text-dim: #525252;
-    --text-faint: #8a8a85;
-    --border: #e5e5e0;
-    --border-strong: #d4d4d0;
-    --danger: #dc2626;
-    --warning: #d97706;
-    --sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --display: 'Fraunces', ui-serif, Georgia, serif;
-    --mono: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, monospace;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-  body { font-family: var(--sans); color: var(--text); background: var(--bg); }
+  html, body { height: 100%; overflow: hidden; }
   .header {
     height: 60px;
     border-bottom: 1px solid var(--border);
@@ -38,8 +21,8 @@
     display: flex; align-items: center; gap: 14px;
     background: var(--surface);
   }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 500; }
-  .brand-dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 600; font-size: 14.5px; }
+  .brand-dot { display: none; }
   .testing-badge {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 4px 10px; border-radius: 999px;
@@ -291,12 +274,17 @@
     text-transform: uppercase; letter-spacing: 0.08em;
     color: var(--text-dim);
   }
+
+  /* Studio overrides */
+  .header { background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .ic-inline { display: inline-flex; align-items: center; vertical-align: -2px; }
 </style>
 </head>
 <body>
 <div id="root"></div>
 
 <script type="text/babel">
+const Icon = ({ name, cls }) => <span className="ic-inline" dangerouslySetInnerHTML={{ __html: Studio.icon(name, cls || '') }} />;
 const { useState, useEffect, useRef } = React;
 
 function App() {
@@ -448,7 +436,7 @@ function App() {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
         <div className="spinner-big"></div>
-        <div className="loading-text">Loading funnel draft…</div>
+        <div className="loading-text">Loading funnel draft</div>
       </div>
     );
   }
@@ -456,19 +444,19 @@ function App() {
   return (
     <>
       <div className="header">
-        <div className="brand">
-          <span className="brand-dot"></span>
+        <a className="brand" href="/" style={{ textDecoration: 'none', color: 'var(--text)' }}>
+          <span className="brand-mark"></span>
           <span>Content Generation Studio · Funnel Only</span>
         </div>
         <div className="header-spacer"></div>
         <div className="header-controls">
           <span className="regen-counter">Regens: <strong>{regen.remaining}</strong>/{regen.limit}</span>
           <button className="btn" onClick={regenerate} disabled={regen.remaining <= 0 || regenLoading}>
-            {regenLoading ? '⟳ Regenerating…' : '↻ Regenerate'}
+            {regenLoading ? 'Regenerating' : 'Regenerate'}
           </button>
-          <a className="btn" href="/funnel-only" style={{ textDecoration: 'none' }}>← New funnel</a>
+          <a className="btn" href="/funnel-only" style={{ textDecoration: 'none' }}><Icon name="plus" cls="sm" /> New funnel</a>
           <button className="btn btn-primary" onClick={pushToCC360}>
-            ✓ Push Funnel to CC360
+            <Icon name="send" cls="sm" /> Publish funnel
           </button>
         </div>
       </div>
@@ -537,13 +525,13 @@ function FunnelView({ funnel, draftId, step, setStep, openSections, toggleSectio
         <div className="funnel-step-bar">
           <span className="funnel-step-label">Funnel Step</span>
           <select className="funnel-step-select" value={step} onChange={e => setStep(e.target.value)}>
-            <option value="sales">Step 1 — Course Sales Page</option>
-            <option value="checkout">Step 2 — Checkout / Order Form</option>
-            <option value="confirmation">Step 3 — Confirmation Page</option>
+            <option value="sales">Step 1: Sales page</option>
+            <option value="checkout">Step 2: Checkout</option>
+            <option value="confirmation">Step 3: Confirmation</option>
           </select>
         </div>
 
-        <FunnelSection id="brand" num="⨀" title="Brand Colors" meta="applies to all 3 steps">
+        <FunnelSection id="brand" num="1" title="Brand colors" meta="applies to all 3 steps">
           <div className="funnel-color-row">
             <div>
               <div className="funnel-field-label">Primary accent</div>
@@ -606,7 +594,7 @@ function FunnelView({ funnel, draftId, step, setStep, openSections, toggleSectio
               </div>
             </FunnelSection>
 
-            <FunnelSection id="instructor" num="4" title="About the Instructor" meta='"Meet …"'>
+            <FunnelSection id="instructor" num="4" title="About the Instructor" meta='"Meet"'>
               <Field label='Instructor first name' value={input.instructorName} onChange={v => setInput('instructorName', v)} />
               <Field label="Bio paragraph 1" value={c.instructor.bio_1} onChange={v => setField('instructor.bio_1', v)} multiline minHeight="70px" />
               <Field label="Bio paragraph 2" value={c.instructor.bio_2} onChange={v => setField('instructor.bio_2', v)} multiline minHeight="70px" />
@@ -713,7 +701,7 @@ function FunnelView({ funnel, draftId, step, setStep, openSections, toggleSectio
         )}
 
         {step === 'checkout' && (
-          <FunnelSection id="checkout" num="✓" title="Checkout Page" meta='Step 2 · "Complete your order"'>
+          <FunnelSection id="checkout" num="2" title="Checkout page" meta='Step 2'>
             <div className="funnel-fixed-note" style={{ marginBottom: 12 }}>
               ℹ︎ The right-side panel (laptop image, "what you get" bullets, price, featured testimonial) reuses content from the Pricing Block on the Sales Page step.
             </div>
@@ -725,7 +713,7 @@ function FunnelView({ funnel, draftId, step, setStep, openSections, toggleSectio
         )}
 
         {step === 'confirmation' && (
-          <FunnelSection id="confirmation" num="✓" title="Confirmation Page" meta="Step 3 · post-purchase welcome">
+          <FunnelSection id="confirmation" num="3" title="Confirmation page" meta="Step 3">
             <Field label="Top eyebrow" value={c.confirmation.eyebrow} onChange={v => setField('confirmation.eyebrow', v)} />
             <Field label="Welcome headline" value={c.confirmation.headline} onChange={v => setField('confirmation.headline', v)} />
             <hr style={{ border: 'none', borderTop: '1px dashed var(--border)', margin: '14px 0' }} />
@@ -774,7 +762,7 @@ function PushOverlay({ events, done, onClose, cvResult }) {
       <div className="push-card">
         <div className="push-card-head">
           <div className="push-card-title">
-            {allDone ? '✓ Funnel pushed' : errEvent ? '✗ Push failed' : 'Pushing funnel to CC360…'}
+            {allDone ? 'Funnel published' : errEvent ? 'Publish failed' : 'Publishing funnel'}
           </div>
         </div>
         <div className="push-card-body">
@@ -793,8 +781,8 @@ function PushOverlay({ events, done, onClose, cvResult }) {
             return (
               <div key={p.key} className={`push-step ${s}`}>
                 <div className="push-step-icon">
-                  {s === 'done' && '✓'}
-                  {s === 'failed' && '✗'}
+                  {s === 'done' && <Icon name="check" cls="sm" />}
+                  {s === 'failed' && <Icon name="x" cls="sm" />}
                   {s === 'active' && '·'}
                   {s === 'pending' && ''}
                 </div>
@@ -822,7 +810,7 @@ function PushOverlay({ events, done, onClose, cvResult }) {
         </div>
         <div className="push-card-foot">
           {allDone && (
-            <a className="btn btn-accent" href={`https://app.gohighlevel.com/v2/location/${events.find(e => e.phase === 'start')?.locationId}/settings/business-profile`} target="_blank" rel="noopener" style={{ textDecoration: 'none' }}>↗ Open sub-account</a>
+            <a className="btn btn-accent" href={`https://app.gohighlevel.com/v2/location/${events.find(e => e.phase === 'start')?.locationId}/settings/business-profile`} target="_blank" rel="noopener" style={{ textDecoration: 'none' }}><Icon name="external" cls="sm" /> Open sub-account</a>
           )}
           <button className="btn" onClick={onClose} disabled={!done}>
             {done ? 'Close' : 'Working…'}

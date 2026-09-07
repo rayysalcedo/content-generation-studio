@@ -76,8 +76,6 @@
   const NAV = [
     { href: '/',            label: 'Course',      key: 'course' },
     { href: '/funnel-only', label: 'Funnel only', key: 'funnel' },
-    { href: '/jobs.html',   label: 'Jobs',        key: 'jobs' },
-    { href: '/setup',       label: 'Settings',    key: 'setup' },
   ];
   const STEPS = ['Generate', 'Review', 'Publish'];
 

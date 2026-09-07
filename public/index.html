@@ -273,24 +273,10 @@ modeButtons.forEach(btn => {
   });
 });
 
-// ============ Location ID: remember last used per browser ============
-const LOCATION_STORAGE_KEY = 'cc360.lastLocationId';
+// ============ Location ID ============
+// Intentionally not pre-filled: the user must enter the sub-account ID each time.
 const LOCATION_ID_RE = /^[a-zA-Z0-9]{15,30}$/;
 const locationInput = document.getElementById('locationId');
-
-// Pre-fill from localStorage if available; otherwise try the server's default fallback
-(function initLocationId() {
-  const saved = localStorage.getItem(LOCATION_STORAGE_KEY);
-  if (saved && LOCATION_ID_RE.test(saved)) {
-    locationInput.value = saved;
-    return;
-  }
-  fetch('/api/config').then(r => r.json()).then(cfg => {
-    if (!locationInput.value && cfg && cfg.defaultLocationId && LOCATION_ID_RE.test(cfg.defaultLocationId)) {
-      locationInput.value = cfg.defaultLocationId;
-    }
-  }).catch(() => {});
-})();
 
 // ============ File upload ============
 const dropzone = document.getElementById('dropzone');
@@ -451,7 +437,6 @@ form.addEventListener('submit', async (e) => {
   }
 
   // Persist for next time
-  try { localStorage.setItem(LOCATION_STORAGE_KEY, locationId); } catch (_) {}
 
   setLoading(true);
 

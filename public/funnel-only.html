@@ -122,12 +122,10 @@
 
 <script>Studio.mountTopbar({ active: "funnel", step: 1 });</script>
 <script>
-const LOCATION_KEY = 'cc360.lastLocationId';
 const LOCATION_ID_RE = /^[A-Za-z0-9]{15,30}$/;
 
 // Restore location ID (shared with main studio so users don't re-type)
 const locationInput = document.getElementById('locationId');
-try { const saved = localStorage.getItem(LOCATION_KEY); if (saved) locationInput.value = saved; } catch (_) {}
 
 // Photo dropzone
 const photoZone = document.getElementById('photo-dropzone');
@@ -183,7 +181,6 @@ form.addEventListener('submit', async (e) => {
 
   if (!photoInput.files.length) return showError('Upload an instructor photo.');
 
-  try { localStorage.setItem(LOCATION_KEY, locationId); } catch (_) {}
   setLoading(true);
 
   try {

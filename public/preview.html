@@ -847,7 +847,7 @@ function App() {
         setDraft(data.structure);
         setAccent(data.accent || '#6366f1');
         setRegen(data.regen);
-        if (data.cc360) setPushed(data.cc360);
+        if (data.ghl) setPushed(data.ghl);
         if (data.funnel?.generated && data.funnel.content) {
           setFunnel({
             content: data.funnel.content,
@@ -990,7 +990,7 @@ useEffect(() => {
     }
   }
 
-  // Push to CC360 — streams NDJSON progress events.
+  // Push to GoHighLevel — streams NDJSON progress events.
   // Two-step: requestPush() opens a polished confirmation modal so the user
   // can review what's about to happen (course + funnel together); confirmPush()
   // is what actually fires the POST and consumes the stream.
@@ -1104,7 +1104,7 @@ useEffect(() => {
             <Icon name="refresh" cls="sm" /> Regenerate
           </button>
           {pushed
-            ? <a className="btn btn-accent" href={pushed.url} target="_blank" rel="noopener" style={{ textDecoration: 'none' }}><Icon name="external" cls="sm" /> Open in CC360</a>
+            ? <a className="btn btn-accent" href={pushed.url} target="_blank" rel="noopener" style={{ textDecoration: 'none' }}><Icon name="external" cls="sm" /> Open in GoHighLevel</a>
             : <button className="btn btn-primary" onClick={requestPush} disabled={loading}>
                 <Icon name="send" cls="sm" /> Publish to sub-account
               </button>
@@ -1255,7 +1255,7 @@ useEffect(() => {
                     >Preview PDF <Icon name="external" cls="sm" /></a>
                   </div>
                   <p style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4, marginBottom: 16 }}>
-                    A "Download Workbook" button will be added to the bottom of this lesson in CC360.
+                    A "Download Workbook" button will be added to the bottom of this lesson in GoHighLevel.
                   </p>
 
                   <h4 style={{ fontSize: 13, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 16, marginBottom: 8 }}>Questions</h4>
@@ -1391,7 +1391,7 @@ useEffect(() => {
           done={pushDone}
           hasFunnel={!!funnel}
           onClose={() => setPushOpen(false)}
-          cc360Url={pushed?.url}
+          platformUrl={pushed?.url}
         />
       )}
 
@@ -1666,7 +1666,7 @@ function FunnelView({ funnel, draftId, step, setStep, openSections, toggleSectio
 }
 
 // ============================================================
-// PushConfirmModal — pre-flight confirmation before pushing to CC360
+// PushConfirmModal — pre-flight confirmation before pushing to GoHighLevel
 // Lays out what's about to happen (course + funnel together) and gives
 // the user a chance to back out and keep editing.
 // ============================================================
@@ -1675,7 +1675,7 @@ function PushConfirmModal({ hasFunnel, courseTitle, onConfirm, onCancel }) {
     <div className="push-confirm-backdrop" onClick={onCancel}>
       <div className="push-confirm-modal" onClick={e => e.stopPropagation()}>
         <div className="push-confirm-icon"><Icon name="send" cls="lg" /></div>
-        <h2 className="push-confirm-title">Ready to push to CC360?</h2>
+        <h2 className="push-confirm-title">Ready to push to GoHighLevel?</h2>
         <p className="push-confirm-subtitle">
           {hasFunnel
             ? <>This will push <strong>both your course AND your AI funnel</strong> to your sub-account in one go.</>
@@ -1719,10 +1719,10 @@ function PushConfirmModal({ hasFunnel, courseTitle, onConfirm, onCancel }) {
 // ============================================================
 // PushOverlay — streams progress events from /api/push as a checklist
 // ============================================================
-function PushOverlay({ events, done, hasFunnel, onClose, cc360Url }) {
+function PushOverlay({ events, done, hasFunnel, onClose, platformUrl }) {
   // Define the canonical phase list — gives a stable checklist even before events arrive
   const allPhases = [
-    { key: 'auth',                  label: 'Authenticate with CC360' },
+    { key: 'auth',                  label: 'Authenticate with GoHighLevel' },
     { key: 'workbooks',             label: 'Upload workbook PDFs' },
     { key: 'course-import',         label: 'Import course outline' },
     ...(hasFunnel ? [
@@ -1794,8 +1794,8 @@ function PushOverlay({ events, done, hasFunnel, onClose, cc360Url }) {
           )}
         </div>
         <div className="push-card-foot">
-          {allDone && cc360Url && (
-            <a href={cc360Url} target="_blank" rel="noopener" className="btn btn-accent" style={{ textDecoration: 'none' }}><Icon name="external" cls="sm" /> Open course</a>
+          {allDone && platformUrl && (
+            <a href={platformUrl} target="_blank" rel="noopener" className="btn btn-accent" style={{ textDecoration: 'none' }}><Icon name="external" cls="sm" /> Open course</a>
           )}
           {allDone && hasFunnel && (() => {
             // Pull locationId out of the start event so we can deep-link to the
@@ -1803,7 +1803,7 @@ function PushOverlay({ events, done, hasFunnel, onClose, cc360Url }) {
             const startEv = events.find(e => e.phase === 'start');
             const lid = startEv?.locationId;
             if (!lid) return null;
-            const funnelUrl = `https://app.coursecreator360.com/v2/location/${lid}/funnels-websites/funnels`;
+            const funnelUrl = `https://app.gohighlevel.com/v2/location/${lid}/funnels-websites/funnels`;
             return (
               <a href={funnelUrl} target="_blank" rel="noopener" className="btn btn-primary" style={{ textDecoration: 'none' }}><Icon name="external" cls="sm" /> View funnel</a>
             );

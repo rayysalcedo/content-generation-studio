@@ -1,7 +1,7 @@
 # Content Generation Studio
 
 Turns a PDF or a short course description into a fully built course in a
-CourseCreator360 / GoHighLevel sub-account — modules, lessons, lesson content,
+GoHighLevel sub-account — modules, lessons, lesson content,
 downloadable workbooks, an optional 3-step sales funnel, and (on a paid Gemini
 project) AI thumbnails. Connected to the sub-account through a **Private
 Integration** token; no marketplace app or OAuth required.
@@ -13,7 +13,7 @@ AI provider: **Google Gemini** (text + Nano Banana images).
 ## Setup
 
 ### 1. Create a Private Integration in the sub-account
-CC360 → Settings → Private Integrations → **+ Create**. Scopes:
+In the sub-account: Settings → Private Integrations → **+ Create**. Scopes:
 
 ```
 courses.readonly  courses.write
@@ -38,8 +38,8 @@ npm start                # http://localhost:3000
 
 Minimum env:
 ```
-CC360_JWT=pit-...
-CC360_LOCATION_ID=<sub-account id from the URL>
+GHL_PIT_TOKEN=pit-...
+GHL_LOCATION_ID=<sub-account id from the URL>
 GEMINI_API_KEY=...
 AI_IMAGES=off            # remove once on a paid Gemini project
 ```
@@ -50,7 +50,7 @@ AI_IMAGES=off            # remove once on a paid Gemini project
 
 1. Push this repo to GitHub and create a **Web Service** from it (Node, `npm start`).
 2. Add the env vars above under **Environment**.
-3. Do **not** set `DATABASE_URL` or the `GHL_*` OAuth vars — those switch the app
+3. Do **not** set `DATABASE_URL` or the `GHL_CLIENT_*` / `GHL_OAUTH_*` vars — those switch the app
    into multi-tenant marketplace mode and need a Postgres database.
 
 The `.onrender.com` URL follows the service name (Settings → General → Name).
@@ -61,8 +61,9 @@ The `.onrender.com` URL follows the service name (Settings → General → Name)
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CC360_JWT` | — | Private Integration token |
-| `CC360_LOCATION_ID` | — | Sub-account ID |
+| `GHL_PIT_TOKEN` | — | Private Integration token |
+| `GHL_LOCATION_ID` | — | Sub-account ID (server-side fallback only; the form no longer pre-fills it) |
+| `GHL_APP_ORIGIN` | `https://app.gohighlevel.com` | Your platform's web-app origin (set for white-label domains) |
 | `GEMINI_API_KEY` | — | Gemini key |
 | `GEMINI_TEXT_MODEL` | `gemini-3.7-flash` | Course / workbook / funnel copy |
 | `GEMINI_IMAGE_MODEL` | `gemini-3.1-flash-image` | Thumbnails + funnel images |
@@ -72,13 +73,13 @@ The `.onrender.com` URL follows the service name (Settings → General → Name)
 | `AI_WORKBOOK_DELAY_MS` | `400` | Raise to ~20000 on the free tier |
 | `AI_IMAGE_CONCURRENCY` | `3` | Parallel image calls |
 | `REGEN_LIMIT` | `3` | Regenerations per sub-account |
-| `CC360_USER_JWT` | — | Browser session JWT, only for the thumbnail-attach step |
+| `GHL_USER_JWT` | — | Browser session JWT, only for the thumbnail-attach step |
 
 ---
 
 ## Notes
 
-- **Thumbnail attach** uses CC360's internal `backend.leadconnectorhq.com` API with a
+- **Thumbnail attach** uses the platform's internal `backend.leadconnectorhq.com` API with a
   browser session JWT that expires hourly (paste it at `/setup`). Course creation
   itself uses the public import API and does not need it.
 - **Snapshot push** and **funnel share-to-locations** require an agency-level OAuth

@@ -390,8 +390,8 @@ function App() {
     }
   }
 
-  async function pushToCC360() {
-    if (!confirm('Push this funnel to CC360? This will update custom values on your sub-account.')) return;
+  async function pushToPlatform() {
+    if (!confirm('Push this funnel to GoHighLevel? This will update custom values on your sub-account.')) return;
     setPushEvents([]);
     setPushOpen(true);
     setPushDone(false);
@@ -455,7 +455,7 @@ function App() {
             {regenLoading ? 'Regenerating' : 'Regenerate'}
           </button>
           <a className="btn" href="/funnel-only" style={{ textDecoration: 'none' }}><Icon name="plus" cls="sm" /> New funnel</a>
-          <button className="btn btn-primary" onClick={pushToCC360}>
+          <button className="btn btn-primary" onClick={pushToPlatform}>
             <Icon name="send" cls="sm" /> Publish funnel
           </button>
         </div>
@@ -732,7 +732,7 @@ function FunnelView({ funnel, draftId, step, setStep, openSections, toggleSectio
 // ============================================================
 function PushOverlay({ events, done, onClose, cvResult }) {
   const allPhases = [
-    { key: 'auth',                  label: 'Authenticate with CC360' },
+    { key: 'auth',                  label: 'Authenticate with GoHighLevel' },
     { key: 'funnel-photo',          label: 'Upload instructor photo' },
     { key: 'funnel-images',         label: 'Upload funnel images' },
     { key: 'funnel-customvalues',   label: 'Push funnel custom values' },

@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>fetch('/api/config').then(r=>r.json()).then(c=>{window.__studioConfig=c;}).catch(()=>{});</script>
 <script src="/vendor/react.js"></script>
 <script src="/vendor/react-dom.js"></script>
 <script src="/vendor/babel.js"></script>
@@ -611,7 +612,7 @@
   }
 
   /* ═══════════════════════════════════════════════════
-     REAL IMAGE STYLES — match CC360 funnel rendering
+     REAL IMAGE STYLES — match GoHighLevel funnel rendering
      ═══════════════════════════════════════════════════ */
   .hero-video {
     position: relative;
@@ -1053,7 +1054,7 @@ const THEMES = {
 };
 
 // ═══════════════════════════════════════════════════════
-// MOCK CONTENT (matches CC360 custom_value keys 1:1)
+// MOCK CONTENT (matches GoHighLevel custom_value keys 1:1)
 // Use generic-but-realistic AI course content as defaults.
 // ═══════════════════════════════════════════════════════
 const MOCK = {
@@ -1235,7 +1236,7 @@ function ImgSlot({ ai = false, label, style }) {
 }
 
 // ═══════════════════════════════════════════════════════
-// Real-image URLs sourced from the live CC360 funnel preview.
+// Real-image URLs sourced from the live GoHighLevel funnel preview.
 // STATIC = shared assets baked into every theme template (agency-level)
 // TEMPLATE_DEFAULTS = the AI-generated images baked into the Emerald master
 //   template. Used as fallback when a draft hasn't generated its own images
@@ -1254,7 +1255,7 @@ const STATIC = {
     `${CDN_BASE}/r_320/u_https://storage.googleapis.com/msgsndr/YzdUoBRFcujSI4N6tUdf/media/68d14c771a53e2937dd88cec.png`,
   ],
   // The three testimonial avatars (one per testimonial card).
-  // NOTE: CC360 names these "student-success-grid" in their CDN — the filename
+  // NOTE: GoHighLevel names these "student-success-grid" in their CDN — the filename
   // is misleading, they're actually the AI-generated portrait photos used as
   // the small avatar at the bottom of each testimonial card.
   testimonialAvatars: [
@@ -1293,7 +1294,7 @@ function funnelImgSrc(draftId, imageKeys, key) {
   return imageKeys.has(key) ? `/api/preview-funnel-image/${draftId}/${key}` : fallback;
 }
 
-// Gold 5-star widget — matches the CC360 template's star row.
+// Gold 5-star widget — matches the GoHighLevel template's star row.
 function Stars5({ size = 18, color = '#FFC107' }) {
   return (
     <span className="stars5" style={{ color, fontSize: size }} aria-label="5 stars">
@@ -1400,7 +1401,7 @@ function App() {
     });
   };
 
-  async function pushToCC360() {
+  async function pushToPlatform() {
     if (!draftId) {
       showToast('Sample preview. Open a draft to publish.', true);
       return;
@@ -1412,8 +1413,8 @@ function App() {
       ? `/api/push/${draftId}`
       : `/api/funnel-only/push/${draftId}`;
     const confirmMsg = hasCourse
-      ? `This will push BOTH your course AND the ${theme.name}-themed funnel to CC360. Ready to proceed?`
-      : `Apply the ${theme.name} theme template and push funnel content to CC360?`;
+      ? `This will push BOTH your course AND the ${theme.name}-themed funnel to GoHighLevel. Ready to proceed?`
+      : `Apply the ${theme.name} theme template and push funnel content to GoHighLevel?`;
     if (!confirm(confirmMsg)) return;
     setPushEvents([]);
     setPushOpen(true);
@@ -1456,7 +1457,7 @@ function App() {
     <div style={cssVars} className={embedded ? 'embedded-mode' : ''}>
       {embedded ? (
         // Slim toolbar for iframe mode — just theme + step tabs. Parent owns
-        // back-navigation and the Push to CC360 button.
+        // back-navigation and the Push to GoHighLevel button.
         <header className="app-header embedded">
           <div className="theme-picker">
             <span className="theme-picker-label">Theme</span>
@@ -1542,7 +1543,7 @@ function App() {
             ))}
           </div>
 
-          <button className="header-btn primary" onClick={pushToCC360} disabled={pushing}>
+          <button className="header-btn primary" onClick={pushToPlatform} disabled={pushing}>
             {pushing ? 'Publishing' : 'Publish funnel'}
           </button>
           <button className="header-btn" type="button" title="Switch theme" aria-label="Switch theme" onClick={() => Studio.toggleTheme()} style={{ padding: '8px 10px' }}>
@@ -1590,12 +1591,12 @@ function App() {
 // PUSH PROGRESS OVERLAY
 // Streams NDJSON events from /api/funnel-only/push and shows a friendly
 // progress bar + per-step checklist, ending with a success state and a
-// link into the user's CC360 sub-account.
+// link into the user's GoHighLevel sub-account.
 // ═══════════════════════════════════════════════════════
 
 // Phase order — must match the server's emit sequence in /api/funnel-only/push
 const PUSH_PHASES = [
-  { key: 'auth',                label: 'Authenticating with CC360',     doneLabel: 'Authenticated' },
+  { key: 'auth',                label: 'Authenticating with GoHighLevel',     doneLabel: 'Authenticated' },
   { key: 'theme-snapshot',      label: 'Applying theme template',       doneLabel: 'Theme applied' },
   { key: 'funnel-photo',        label: 'Uploading instructor photo',    doneLabel: 'Photo uploaded' },
   { key: 'funnel-images',       label: 'Uploading AI-generated images', doneLabel: 'Images uploaded' },
@@ -1644,10 +1645,11 @@ function PushOverlay({ events, done, theme, locationId, onClose }) {
     subtext = `${latestEv.total} content values`;
   }
 
-  // CC360 destination — funnels list inside the sub-account.
+  // GoHighLevel destination — funnels list inside the sub-account.
   // The just-pushed funnel will be the most-recent entry there.
-  const cc360Url = locationId
-    ? `https://app.coursecreator360.com/v2/location/${locationId}/funnels-websites/funnels`
+  const appOrigin = (window.__studioConfig && window.__studioConfig.appOrigin) || 'https://app.gohighlevel.com';
+  const platformUrl = locationId
+    ? `${appOrigin}/v2/location/${locationId}/funnels-websites/funnels`
     : null;
 
   return (
@@ -1657,7 +1659,7 @@ function PushOverlay({ events, done, theme, locationId, onClose }) {
           <strong>
             {isError   ? 'Push failed' :
              isSuccess ? 'All done!'   :
-                         'Pushing to CC360'}
+                         'Pushing to GoHighLevel'}
           </strong>
           {(done || isError) && (
             <button className="push-close-btn" onClick={onClose} aria-label="Close"><span dangerouslySetInnerHTML={{ __html: Studio.icon("x") }} style={{ display: "inline-flex" }} /></button>
@@ -1693,24 +1695,24 @@ function PushOverlay({ events, done, theme, locationId, onClose }) {
                         className="push-check-mark"/>
                 </svg>
               </div>
-              <h3 className="push-success-title">Your funnel is live in CC360</h3>
+              <h3 className="push-success-title">Your funnel is live in GoHighLevel</h3>
               <p className="push-success-sub">
                 The {theme.name} theme has been applied and all your content is synced.
               </p>
               <div className="push-locate-hint">
-                <span className="push-locate-hint-label">FIND IT IN CC360</span>
+                <span className="push-locate-hint-label">FIND IT IN GoHighLevel</span>
                 <span className="push-locate-hint-text">
                   Sites, then Funnels. Look for <strong>"Content Generation Studio Funnel ({theme.name}-Theme)"</strong>
                 </span>
               </div>
-              {cc360Url ? (
-                <a href={cc360Url} target="_blank" rel="noreferrer" className="push-cta-link">
+              {platformUrl ? (
+                <a href={platformUrl} target="_blank" rel="noreferrer" className="push-cta-link">
                   Open funnels
                 </a>
               ) : (
                 <button className="push-cta-link" onClick={onClose}>Close</button>
               )}
-              {cc360Url && (
+              {platformUrl && (
                 <button className="push-secondary-btn" onClick={onClose}>Stay here</button>
               )}
             </div>

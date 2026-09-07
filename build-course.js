@@ -10,18 +10,18 @@ import path from 'path';
 
 import { extractPdfText } from './lib/extract-pdf.js';
 import { generateCourseStructure } from './lib/generate.js';
-import { importCourse } from './lib/cc360.js';
+import { importCourse } from './lib/ghl.js';
 
 const {
-  CC360_JWT,
-  CC360_LOCATION_ID,
+  GHL_PIT_TOKEN,
+  GHL_LOCATION_ID,
   GEMINI_API_KEY,
   GEMINI_TEXT_MODEL = 'gemini-3.7-flash',
   THEME_ACCENT = '#6366f1',
 } = process.env;
 
-if (!CC360_JWT || !CC360_LOCATION_ID || !GEMINI_API_KEY) {
-  console.error('❌ Missing env vars. Required: CC360_JWT (PIT), CC360_LOCATION_ID, GEMINI_API_KEY');
+if (!GHL_PIT_TOKEN || !GHL_LOCATION_ID || !GEMINI_API_KEY) {
+  console.error('❌ Missing env vars. Required: GHL_PIT_TOKEN (PIT), GHL_LOCATION_ID, GEMINI_API_KEY');
   process.exit(1);
 }
 
@@ -47,7 +47,7 @@ async function main() {
   console.log(` PDF:        ${pdfPath}`);
   console.log(` Title:      ${courseTitle}`);
   console.log(` Audience:   ${targetAudience}`);
-  console.log(` Location:   ${CC360_LOCATION_ID}`);
+  console.log(` Location:   ${GHL_LOCATION_ID}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   const t0 = Date.now();
@@ -70,10 +70,10 @@ async function main() {
   const lessonCount = structure.modules.reduce((s, m) => s + (m.lessons?.length || 0), 0);
   console.log(`   Generated ${structure.modules.length} modules, ${lessonCount} lessons`);
 
-  console.log(`🚀 Importing to CC360...`);
+  console.log(`🚀 Importing to GoHighLevel...`);
   const course = await importCourse({
-    pit: CC360_JWT,
-    locationId: CC360_LOCATION_ID,
+    pit: GHL_PIT_TOKEN,
+    locationId: GHL_LOCATION_ID,
     draft: structure,
     accent: THEME_ACCENT,
   });

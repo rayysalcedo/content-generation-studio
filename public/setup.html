@@ -46,7 +46,7 @@
         <dt>Mode</dt><dd>Private integration</dd>
         <dt>Sub-account</dt><dd><code id="pit-location"></code></dd>
       </dl>
-      <p class="mt-16" style="margin-bottom:0">To change the token or sub-account, update <code>CC360_JWT</code> and <code>CC360_LOCATION_ID</code> in the server environment and redeploy.</p>
+      <p class="mt-16" style="margin-bottom:0">To change the token or sub-account, update <code>GHL_PIT_TOKEN</code> and <code>GHL_LOCATION_ID</code> in the server environment and redeploy.</p>
     </div>
 
     <div class="card section" id="install-card">
@@ -76,8 +76,8 @@
       <details style="margin: 0 0 12px;">
         <summary>Capture a JWT manually (only if auto-sync stops working)</summary>
         <div class="notice" style="display:block;">
-          <div class="small muted mb-8"><strong>Option A, bookmarklet.</strong> Drag this to your bookmarks bar, then click it while on CC360.</div>
-          <a id="jwt-bookmarklet" href="#" class="btn btn-primary btn-sm" style="cursor: grab; user-select: none;"><i data-icon="key" class="sm"></i> Capture CC360 JWT</a>
+          <div class="small muted mb-8"><strong>Option A, bookmarklet.</strong> Drag this to your bookmarks bar, then click it while on GoHighLevel.</div>
+          <a id="jwt-bookmarklet" href="#" class="btn btn-primary btn-sm" style="cursor: grab; user-select: none;"><i data-icon="key" class="sm"></i> Capture GoHighLevel JWT</a>
 
           <div class="mt-16" style="padding-top: 14px; border-top: 1px solid var(--border);">
             <div class="small muted mb-8"><strong>Option B, paste manually.</strong></div>
@@ -234,7 +234,7 @@ const jwtBookmarklet = document.getElementById('jwt-bookmarklet');
         }
         return o.apply(this,a);
       };
-      alert('No JWT in storage. Click any link or page in CC360 and it will be captured from the next network request.');
+      alert('No JWT in storage. Click any link or page in GoHighLevel and it will be captured from the next network request.');
     })();
   `.replace(/\s+/g, ' ').trim();
   jwtBookmarklet.href = 'javascript:' + encodeURIComponent(src);
@@ -242,7 +242,7 @@ const jwtBookmarklet = document.getElementById('jwt-bookmarklet');
 
 jwtBookmarklet.addEventListener('click', (e) => {
   e.preventDefault();
-  alert('To use this bookmarklet:\n\n1. Drag this button to your bookmarks bar (drag, not click)\n2. Go to your CC360 tab\n3. Click the bookmark you just dragged\n\nOr right-click the button and choose "Bookmark this link".');
+  alert('To use this bookmarklet:\n\n1. Drag this button to your bookmarks bar (drag, not click)\n2. Go to your GoHighLevel tab\n3. Click the bookmark you just dragged\n\nOr right-click the button and choose "Bookmark this link".');
 });
 
 async function loadJwtStatus() {
@@ -259,14 +259,14 @@ async function loadJwtStatus() {
 
     if (!data.set) {
       jwtStatusPill.innerHTML = '<span class="badge badge-danger">Not set</span>';
-      jwtHeadline.innerHTML = `No JWT stored yet. Open <code>app.coursecreator360.com</code> in any agency page and the Custom JS pushes one within seconds. Then refresh this page.`;
+      jwtHeadline.innerHTML = `No JWT stored yet. Open <code>app.gohighlevel.com</code> in any agency page and the Custom JS pushes one within seconds. Then refresh this page.`;
       jwtDetails.style.display = 'none';
       jwtInfo.textContent = 'Thumbnail attach is skipped on publish.';
       return;
     }
 
     jwtDetails.style.display = 'block';
-    jwtSource.textContent = data.source === 'pasted' ? 'CC360 Custom JS auto-sync (or manual paste)' : 'env var CC360_USER_JWT (fallback)';
+    jwtSource.textContent = data.source === 'pasted' ? 'GoHighLevel Custom JS auto-sync (or manual paste)' : 'env var GHL_USER_JWT (fallback)';
     jwtSynced.textContent = data.minutesSinceSync != null
       ? `${data.minutesSinceSync} min ago${data.installedAt ? ` · ${new Date(data.installedAt).toLocaleTimeString()}` : ''}`
       : '-';
@@ -277,16 +277,16 @@ async function loadJwtStatus() {
 
     if (data.expired) {
       jwtStatusPill.innerHTML = '<span class="badge badge-danger">Expired</span>';
-      jwtHeadline.innerHTML = `The last captured JWT has expired. Reload your CC360 tab and a fresh one is pushed within seconds.`;
+      jwtHeadline.innerHTML = `The last captured JWT has expired. Reload your GoHighLevel tab and a fresh one is pushed within seconds.`;
       jwtInfo.textContent = `Publish a course after the status returns to Active.`;
     } else if (data.minutesRemaining < 10) {
       jwtStatusPill.innerHTML = '<span class="badge badge-warn">Expiring</span>';
-      jwtHeadline.innerHTML = `The stored JWT expires in <strong>${data.minutesRemaining} min</strong>. Reload your CC360 tab to refresh it.`;
-      jwtInfo.textContent = `Opening CC360 refreshes it automatically.`;
+      jwtHeadline.innerHTML = `The stored JWT expires in <strong>${data.minutesRemaining} min</strong>. Reload your GoHighLevel tab to refresh it.`;
+      jwtInfo.textContent = `Opening GoHighLevel refreshes it automatically.`;
     } else {
       jwtStatusPill.innerHTML = '<span class="badge badge-success">Active</span>';
       jwtHeadline.innerHTML = `Auto-sync is working. Thumbnails attach on every publish for the next <strong>${data.minutesRemaining} min</strong>.`;
-      jwtInfo.textContent = `Auto-refreshes every CC360 tab session.`;
+      jwtInfo.textContent = `Auto-refreshes every GoHighLevel tab session.`;
     }
   } catch (e) {
     jwtStatusPill.innerHTML = '<span class="badge badge-danger">Error</span>';

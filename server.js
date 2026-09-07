@@ -18,7 +18,7 @@ import { generateThumbnailsForCourse, base64ToBuffer } from './lib/generate-thum
 import { renderLessonHTML, buildTheme } from './lib/render-html.js';
 import { renderWorkbookPdf } from './lib/pdf-renderer.js';
 import { uploadToMediaLibrary, uploadCourseMedia } from './lib/upload-media.js';
-import { importCourse, attachThumbnails } from './lib/cc360.js';
+import { importCourse, attachThumbnails } from './lib/ghl.js';
 import {
   buildAuthorizeUrl, exchangeCodeForToken, getValidTokenForLocation,
   newState, consumeState, mintLocationToken, refreshAccessToken,
@@ -44,9 +44,9 @@ process.on('uncaughtException', (err) => {
 });
 
 const {
-  CC360_JWT,                                  // Legacy PIT fallback (single-account use)
-  CC360_USER_JWT,                             // User-session JWT for INTERNAL backend.* API (thumbnail attach only)
-  CC360_LOCATION_ID,                          // Optional fallback (used by CLI / when form leaves it empty)
+  GHL_PIT_TOKEN,                                  // Legacy PIT fallback (single-account use)
+  GHL_USER_JWT,                             // User-session JWT for INTERNAL backend.* API (thumbnail attach only)
+  GHL_LOCATION_ID,                          // Optional fallback (used by CLI / when form leaves it empty)
   GEMINI_API_KEY,                             // The one and only AI provider key now
   GEMINI_TEXT_MODEL = 'gemini-3.7-flash',     // Course structure + workbook + funnel copy
   GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image', // Thumbnails + funnel images (Nano Banana 2)
@@ -73,9 +73,9 @@ if (!GEMINI_API_KEY) {
 // failing on every image call.
 const IMAGES_ENABLED = !!GEMINI_API_KEY && String(AI_IMAGES).toLowerCase() !== 'off';
 const oauthConfigured = !!(GHL_CLIENT_ID && GHL_CLIENT_SECRET && GHL_OAUTH_REDIRECT_URI);
-if (!CC360_JWT && !oauthConfigured) {
-  console.error('❌ No CC360 auth configured. Set either:');
-  console.error('   • CC360_JWT (PIT, legacy single-account), OR');
+if (!GHL_PIT_TOKEN && !oauthConfigured) {
+  console.error('❌ No GoHighLevel auth configured. Set either:');
+  console.error('   • GHL_PIT_TOKEN (PIT, legacy single-account), OR');
   console.error('   • GHL_CLIENT_ID + GHL_CLIENT_SECRET + GHL_OAUTH_REDIRECT_URI (OAuth, multi-tenant)');
   process.exit(1);
 }
@@ -89,10 +89,10 @@ function isValidLocationId(s) {
 function pickLocationId(reqValue) {
   const v = (reqValue || '').trim();
   if (v) return v;
-  return CC360_LOCATION_ID || '';
+  return GHL_LOCATION_ID || '';
 }
 
-// Resolve a CC360 auth token for a specific sub-account.
+// Resolve a GoHighLevel auth token for a specific sub-account.
 // Tries OAuth first (if configured); falls back to the legacy PIT.
 // Returns a Bearer token string.
 async function resolveTokenForLocation(locationId) {
@@ -142,14 +142,14 @@ async function resolveTokenForLocation(locationId) {
     }
 
     // ---- Path 3: PIT fallback ----
-    if (CC360_JWT) {
+    if (GHL_PIT_TOKEN) {
       console.warn(`⚠️  OAuth resolve failed for ${locationId} — falling back to PIT.`);
-      return { token: CC360_JWT, source: 'pit-fallback' };
+      return { token: GHL_PIT_TOKEN, source: 'pit-fallback' };
     }
     throw new Error(`Cannot authenticate to sub-account ${locationId}: no install (location or company) covers it, and no PIT fallback set.`);
   }
-  if (CC360_JWT) return { token: CC360_JWT, source: 'pit' };
-  throw new Error('No auth source available. Install the app at /setup, or set CC360_JWT.');
+  if (GHL_PIT_TOKEN) return { token: GHL_PIT_TOKEN, source: 'pit' };
+  throw new Error('No auth source available. Install the app at /setup, or set GHL_PIT_TOKEN.');
 }
 
 // Helper: mint a location token from a company install, refresh the company token first if it's about to expire, and cache the minted token so we don't re-mint on every request.
@@ -728,7 +728,7 @@ app.post('/api/regenerate/:draftId', async (req, res) => {
     const draft = drafts.get(draftId);
     if (!draft) return res.status(404).json({ error: 'Draft not found' });
 
-    const draftLocationId = draft.input.locationId || CC360_LOCATION_ID;
+    const draftLocationId = draft.input.locationId || GHL_LOCATION_ID;
     const info = getRegenInfo(draftLocationId);
     if (info.remaining <= 0) {
       return res.status(429).json({
@@ -971,7 +971,7 @@ app.get('/api/preview-pdf/:draftId/:mi/:li', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------
-// API: Push a draft to CC360 (renders + uploads workbooks, then imports course)
+// API: Push a draft to GoHighLevel (renders + uploads workbooks, then imports course)
 // Streams progress as newline-delimited JSON so the client can show real-time
 // checkpoints. Also pushes the AI funnel after the course if the draft has one.
 // ---------------------------------------------------------------------
@@ -994,7 +994,7 @@ app.post('/api/push/:draftId', async (req, res) => {
     }
 
     const accent = draft.input.accent || '#6366f1';
-    const draftLocationId = draft.input.locationId || CC360_LOCATION_ID;
+    const draftLocationId = draft.input.locationId || GHL_LOCATION_ID;
     if (!isValidLocationId(draftLocationId)) {
       emit({ phase: 'error', error: 'Draft has no valid sub-account Location ID' });
       return res.end();
@@ -1014,10 +1014,10 @@ app.post('/api/push/:draftId', async (req, res) => {
       return res.end();
     }
 
-    // For thumbnail uploads we need a User-authClass JWT (the kind the CC360 web app uses).
+    // For thumbnail uploads we need a User-authClass JWT (the kind the GoHighLevel web app uses).
     // The /membership/locations/{lid}/media/signed-url endpoint 401s on OAuth Location/Company
     // tokens — it only accepts User JWTs. Tony's User JWT is auto-synced by the agency-settings
-    // snippet whenever he has CC360 open in a tab.
+    // snippet whenever he has GoHighLevel open in a tab.
     let userJwtForUploads = null;
     let userJwtTokenId = null;
     try {
@@ -1027,7 +1027,7 @@ app.post('/api/push/:draftId', async (req, res) => {
         userJwtTokenId = u.tokenId || null;
         console.log(`🔐 User JWT loaded for thumbnail uploads${userJwtTokenId ? ' (with token-id)' : ''}`);
       } else {
-        console.warn(`⚠️  No User JWT available — thumbnail uploads will be skipped. Paste a JWT at /setup or open CC360 in a tab so the snippet syncs one.`);
+        console.warn(`⚠️  No User JWT available — thumbnail uploads will be skipped. Paste a JWT at /setup or open GoHighLevel in a tab so the snippet syncs one.`);
       }
     } catch (e) {
       console.warn(`⚠️  Could not load User JWT: ${e.message}`);
@@ -1046,7 +1046,7 @@ app.post('/api/push/:draftId', async (req, res) => {
     const thumbnailKeys = Object.keys(thumbnails);
     if (thumbnailKeys.length > 0 && !userJwtForUploads) {
       console.warn(`⚠️  ${thumbnailKeys.length} thumbnails generated but skipping upload — no User JWT available.`);
-      console.warn(`   Open CC360 in a tab (snippet auto-syncs JWT) or paste one at /setup, then re-push.`);
+      console.warn(`   Open GoHighLevel in a tab (snippet auto-syncs JWT) or paste one at /setup, then re-push.`);
     } else if (thumbnailKeys.length > 0) {
       console.log(`🖼️  Uploading ${thumbnailKeys.length} thumbnails to courses CDN...`);
       for (const key of thumbnailKeys) {
@@ -1126,8 +1126,8 @@ app.post('/api/push/:draftId', async (req, res) => {
     // 2. Import the course with thumbnails baked into the payload.
     // The import endpoint MAY honor `posterImage` on products and posts — if so, thumbnails
     // attach during create and we're done. If not, attachThumbnails() below runs as a
-    // best-effort fallback (only if CC360_USER_JWT is configured for backend.* auth).
-    console.log(`📚 Importing course to CC360 sub-account ${draftLocationId}...`);
+    // best-effort fallback (only if GHL_USER_JWT is configured for backend.* auth).
+    console.log(`📚 Importing course to GoHighLevel sub-account ${draftLocationId}...`);
     emit({ phase: 'workbooks', status: 'done', uploaded: Object.keys(workbookUrlByLessonKey).length, total: totalToUpload });
     emit({ phase: 'course-import', status: 'start' });
     const result = await importCourse({
@@ -1142,7 +1142,7 @@ app.post('/api/push/:draftId', async (req, res) => {
     console.log(`   ✓ Course created: ${result.url}`);
     emit({ phase: 'course-import', status: 'done', url: result.url, title: result.title });
     if (courseThumbnailUrl || Object.keys(thumbnailUrlByLessonKey).length > 0) {
-      console.log(`   (posterImage fields included in import payload — open the course in CC360 to verify they took effect)`);
+      console.log(`   (posterImage fields included in import payload — open the course in GoHighLevel to verify they took effect)`);
     }
 
     // 3. Attach thumbnails server-side via services.leadconnectorhq.com.
@@ -1201,7 +1201,7 @@ app.post('/api/push/:draftId', async (req, res) => {
     }
 
     draft.pushedAt = Date.now();
-    draft.cc360 = result;
+    draft.ghl = result;
     draft.uploadResults = uploadResults;
     draft.courseThumbnailUrl = courseThumbnailUrl;
     draft.thumbnailAttachResults = thumbnailAttachResults;
@@ -1252,7 +1252,7 @@ app.post('/api/push/:draftId', async (req, res) => {
         }
         const userAuth = await getActiveUserJwt();
         if (!userAuth?.jwt) {
-          throw new Error('No User JWT available — paste one at /setup or open CC360 in a tab so the snippet syncs one.');
+          throw new Error('No User JWT available — paste one at /setup or open GoHighLevel in a tab so the snippet syncs one.');
         }
         const cloneResult = await cloneFunnelToLocations({
           funnelId: theme.funnelId,
@@ -1384,7 +1384,7 @@ app.post('/api/push/:draftId', async (req, res) => {
 app.get('/api/draft/:draftId', (req, res) => {
   const draft = drafts.get(req.params.draftId);
   if (!draft) return res.status(404).json({ error: 'Draft not found' });
-  const draftLocationId = draft.input.locationId || CC360_LOCATION_ID;
+  const draftLocationId = draft.input.locationId || GHL_LOCATION_ID;
   // Don't ship base64 image data over the wire — just tell the client which keys exist
   const thumbnailKeys = Object.keys(draft.thumbnails || {});
   const funnelImageKeys = Object.keys(draft.funnelImages || {});
@@ -1395,7 +1395,7 @@ app.get('/api/draft/:draftId', (req, res) => {
     locationId: draftLocationId,
     regen: getRegenInfo(draftLocationId),
     pushedAt: draft.pushedAt || null,
-    cc360: draft.cc360 || null,
+    ghl: draft.ghl || null,
     courseThumbnailUrl: draft.courseThumbnailUrl || null,
     workbookStats: draft.workbookStats || null,
     thumbnailStats: draft.thumbnailStats || null,
@@ -1430,10 +1430,11 @@ app.get('/api/draft/:draftId', (req, res) => {
 app.get('/api/config', (_req, res) => {
   res.json({
     multiTenant: true,
-    defaultLocationId: CC360_LOCATION_ID || null,    // used by the form as an initial hint, optional
+    defaultLocationId: GHL_LOCATION_ID || null,    // used by the form as an initial hint, optional
     regenLimit: Number(REGEN_LIMIT),
-    mode: oauthConfigured ? 'oauth' : 'pit',         // how the app authenticates to CC360
-    pitConfigured: !!CC360_JWT,
+    mode: oauthConfigured ? 'oauth' : 'pit',         // how the app authenticates to GoHighLevel
+    pitConfigured: !!GHL_PIT_TOKEN,
+    appOrigin: (process.env.GHL_APP_ORIGIN || 'https://app.gohighlevel.com').replace(/\/$/, ''),
   });
 });
 
@@ -1585,7 +1586,7 @@ app.delete('/api/installations/:locationId', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------
-// User JWT — pasted from CC360 browser session, used for backend.* calls
+// User JWT — pasted from GoHighLevel browser session, used for backend.* calls
 // (the only auth class that endpoint accepts, per GHL's design)
 // ---------------------------------------------------------------------
 const USER_JWT_KEY = '__user_jwt__';
@@ -1598,7 +1599,7 @@ function decodeJwtPayload(jwt) {
   } catch { return null; }
 }
 
-// CORS for the user-jwt endpoints — the bookmarklet runs on app.coursecreator360.com
+// CORS for the user-jwt endpoints — the bookmarklet runs on app.gohighlevel.com
 // and needs to POST cross-origin to our /api/user-jwt
 function setJwtCors(res) {
   res.set('Access-Control-Allow-Origin', '*');
@@ -1612,7 +1613,7 @@ app.get('/api/user-jwt', async (_req, res) => {
   setJwtCors(res);
   try {
     const stored = await tokenStore.getInstallation(USER_JWT_KEY);
-    const envJwt = CC360_USER_JWT;
+    const envJwt = GHL_USER_JWT;
     const active = stored?.accessToken || envJwt || null;
     if (!active) {
       return res.json({ set: false, source: null });
@@ -1647,7 +1648,7 @@ app.post('/api/user-jwt', async (req, res) => {
     const payload = decodeJwtPayload(jwt);
     if (!payload) return res.status(400).json({ error: 'JWT is not parseable. Make sure you copied the whole token (three dot-separated parts).' });
     if (payload.authClass !== 'User') {
-      return res.status(400).json({ error: `JWT has authClass="${payload.authClass}", but we need authClass="User". The bookmarklet must be clicked while logged into CC360 in the browser tab.` });
+      return res.status(400).json({ error: `JWT has authClass="${payload.authClass}", but we need authClass="User". The bookmarklet must be clicked while logged into GoHighLevel in the browser tab.` });
     }
     if (payload.exp && payload.exp * 1000 < Date.now()) {
       return res.status(400).json({ error: `JWT already expired ${Math.round((Date.now() - payload.exp * 1000) / 60000)} min ago. Grab a fresher one.` });
@@ -1695,7 +1696,7 @@ async function getActiveUserJwt() {
       }
     }
   } catch {}
-  return CC360_USER_JWT ? { jwt: CC360_USER_JWT, tokenId: null } : null;
+  return GHL_USER_JWT ? { jwt: GHL_USER_JWT, tokenId: null } : null;
 }
 
 // ---------------------------------------------------------------------
@@ -2097,7 +2098,7 @@ app.post('/api/funnel-only/push/:draftId', async (req, res) => {
       }
       const userAuth = await getActiveUserJwt();
       if (!userAuth?.jwt) {
-        throw new Error('No User JWT available — paste one at /setup or open CC360 in a tab so the snippet syncs one.');
+        throw new Error('No User JWT available — paste one at /setup or open GoHighLevel in a tab so the snippet syncs one.');
       }
       const cloneResult = await cloneFunnelToLocations({
         funnelId: theme.funnelId,
@@ -2238,8 +2239,8 @@ app.listen(PORT, async () => {
   console.log(` Open builder:      http://localhost:${PORT}`);
   console.log(` Open setup:        http://localhost:${PORT}/setup`);
   console.log(` Sub-account:       supplied per request via the form`);
-  if (CC360_LOCATION_ID) {
-    console.log(` Default fallback:  ${CC360_LOCATION_ID} (used if form leaves field empty)`);
+  if (GHL_LOCATION_ID) {
+    console.log(` Default fallback:  ${GHL_LOCATION_ID} (used if form leaves field empty)`);
   }
   console.log(` Regen limit:       ${REGEN_LIMIT} per sub-account`);
   if (oauthConfigured) {
@@ -2256,8 +2257,8 @@ app.listen(PORT, async () => {
     console.log(`                    Redirect:  ${GHL_OAUTH_REDIRECT_URI}`);
     console.log(`                    Storage:   ${tokenStoreBackend()}${tokenStoreBackend() === 'postgres' ? ' ✅ persistent' : ' ⚠️  volatile (wiped on redeploy)'}`);
     console.log(`                    Installs:  ${subAccts.length} sub-account${subAccts.length === 1 ? '' : 's'}, ${companies.length} agency-level`);
-    if (CC360_JWT) console.log(`                    (CC360_JWT PIT also set as fallback)`);
-  } else if (CC360_JWT) {
+    if (GHL_PIT_TOKEN) console.log(`                    (GHL_PIT_TOKEN PIT also set as fallback)`);
+  } else if (GHL_PIT_TOKEN) {
     console.log(` Auth:              ⚠️  PIT only (legacy single-account mode)`);
     console.log(`                    For multi-tenant use, set GHL_CLIENT_ID / SECRET / REDIRECT_URI and visit /setup`);
   }
@@ -2267,7 +2268,7 @@ app.listen(PORT, async () => {
   } else {
     console.log(` Image AI:          ⚠️  OFF (AI_IMAGES=off) — courses/funnels build without thumbnails`);
   }
-  console.log(` Backend JWT:       paste at /setup → "User JWT for thumbnail attach" (Postgres-persisted)${CC360_USER_JWT ? ' · CC360_USER_JWT env override is set' : ''}`);
+  console.log(` Backend JWT:       paste at /setup → "User JWT for thumbnail attach" (Postgres-persisted)${GHL_USER_JWT ? ' · GHL_USER_JWT env override is set' : ''}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 });
 

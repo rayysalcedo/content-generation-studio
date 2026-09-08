@@ -80,7 +80,7 @@ if (!GHL_PIT_TOKEN && !oauthConfigured) {
   process.exit(1);
 }
 
-// Validate a GHL location ID. Real IDs are ~20-char alphanumeric (e.g. ITeSh9QmCqRSsZwtBCZX).
+// Validate a GHL location ID. Real IDs are ~20-char alphanumeric.
 // Keep this permissive — GHL has been known to issue 18-22 char IDs.
 const LOCATION_ID_RE = /^[a-zA-Z0-9]{15,30}$/;
 function isValidLocationId(s) {
